@@ -3,6 +3,9 @@
   <h1>Kuzhiyundo?</h1>
   <p><strong>Community-driven Pothole & Road Defect Tracking Platform</strong></p>
   <p>
+    <a href="https://kuzhiyundo.com" target="_blank"><strong>🌐 kuzhiyundo.com</strong></a>
+  </p>
+  <p>
     <a href="#features">Features</a> •
     <a href="#tech-stack">Tech Stack</a> •
     <a href="#getting-started">Getting Started</a> •
@@ -59,7 +62,7 @@ Ensure you have the following installed on your local machine:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/kuzhiyundo.git
+   git clone https://github.com/sajithlaldev/kuzhiyundo.git
    cd kuzhiyundo
    ```
 
@@ -105,7 +108,7 @@ This is an open-source project, and contributions are highly appreciated! Whethe
 
 ## 🐛 Bug Reports & Feature Requests
 
-Please use the [Issue Tracker](https://github.com/yourusername/kuzhiyundo/issues) to report technical bugs or suggest feature extensions.
+Please use the [Issue Tracker](https://github.com/sajithlaldev/kuzhiyundo/issues) to report technical bugs or suggest feature extensions.
 
 ## 📄 License
 

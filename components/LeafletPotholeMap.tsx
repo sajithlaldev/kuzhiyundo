@@ -886,6 +886,7 @@ function ReportingOverlay({
 }: any) {
   const user = useAuthStore((state) => state.user);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDesktopHovered, setIsDesktopHovered] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -912,6 +913,8 @@ function ReportingOverlay({
       <div
         ref={overlayRef}
         className="absolute z-[1000] top-4 left-4 right-4 md:right-auto md:w-80 flex flex-col gap-3 font-mono pointer-events-none"
+        onMouseEnter={() => setIsDesktopHovered(true)}
+        onMouseLeave={() => setIsDesktopHovered(false)}
       >
         <div className="bg-black/80 border border-cyan-500/50 p-4 md:p-5 shadow-[0_0_20px_rgba(0,255,255,0.15)] backdrop-blur-md relative pointer-events-auto transition-all duration-300">
           <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-50"></div>
@@ -1011,7 +1014,7 @@ function ReportingOverlay({
           </div>
 
           <div
-            className={`grid transition-[grid-template-rows] duration-300 md:grid-rows-[1fr] ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            className={`grid transition-[grid-template-rows] duration-300 ${isDesktopHovered ? "md:grid-rows-[1fr]" : "md:grid-rows-[0fr]"} ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
           >
             <div className="overflow-hidden flex flex-col">
               <div className="pt-3">
@@ -1037,7 +1040,7 @@ function ReportingOverlay({
         </div>
 
         <div
-          className={`grid transition-[grid-template-rows] duration-300 md:grid-rows-[1fr] pointer-events-auto ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+          className={`grid transition-[grid-template-rows] duration-300 pointer-events-auto ${isDesktopHovered ? "md:grid-rows-[1fr]" : "md:grid-rows-[0fr]"} ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
         >
           <div className="overflow-hidden flex flex-col">
             {user ? (
