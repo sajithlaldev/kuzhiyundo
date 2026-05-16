@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+
+    function isValidPotholeReport(data) {
+      return data.keys().hasAll(["userId", "encodedPath", "createdAt", "status", "severity"]) 
+        && data.keys().size() >= 5 && data.keys().size() <= 11
+        && data.userId is string && data.userId.size() > 0 && data.userId == request.auth.uid
+        && data.encodedPath is string && data.encodedPath.size() <= 100000
+        && data.status in ["reported", "confirmed", "fixed"]
+        && data.severity in ["low", "medium", "high"]
+        && (!("address" in data) || (data.address is string && data.address.size() <= 1000))
+        && (!("notes" in data) || (data.notes is string && data.notes.size() <= 2000))
+        && (!("imageUrl" in data) || (data.imageUrl is string && data.imageUrl.size() <= 800000))
+        && (!("userName" in data) || (data.userName is string && data.userName.size() <= 100))
+        && (!("upvoterIds" in data) || (data.upvoterIds is list && data.upvoterIds.size() <= 10000))
+        && (!("downvoterIds" in data) || (data.downvoterIds is list && data.downvoterIds.size() <= 10000));
+    }
+
+    function isSafeVote() {
+      let keys = incoming().diff(existing()).affectedKeys();
+      let onlyVotes = keys.hasOnly(['upvoterIds', 'downvoterIds']);
+      
+      let oldUp = existing().get('upvoterIds', []);
+      let newUp = incoming().get('upvoterIds', []);
+      let validUp = !('upvoterIds' in keys) || (
+        newUp is list && newUp.size() <= 10000 && (
+          (newUp.size() == oldUp.size() + 1 && request.auth.uid in newUp && !(request.auth.uid in oldUp)) ||
+          (newUp.size() == oldUp.size() - 1 && !(request.auth.uid in newUp) && request.auth.uid in oldUp)
+        )
+      );
+
+      let oldDown = existing().get('downvoterIds', []);
+      let newDown = incoming().get('downvoterIds', []);
+      let validDown = !('downvoterIds' in keys) || (
+        newDown is list && newDown.size() <= 10000 && (
+          (newDown.size() == oldDown.size() + 1 && request.auth.uid in newDown && !(request.auth.uid in oldDown)) ||
+          (newDown.size() == oldDown.size() - 1 && !(request.auth.uid in newDown) && request.auth.uid in oldDown)
+        )
+      );
+
+      return onlyVotes && validUp && validDown;
+    }
+
+    match /potholes/{potholeId} {
+      allow read: if true; // Publicly viewable on the map
+      allow create: if isSignedIn() && isValidId(potholeId) && isValidPotholeReport(incoming()) && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && (
+        isSafeVote() ||
+        (isValidPotholeReport(incoming()) && incoming().createdAt == existing().createdAt && existing().userId == incoming().userId && existing().userId == request.auth.uid)
+      );
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}

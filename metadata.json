@@ -1,0 +1,6 @@
+{
+  "name": "Kuzhiyundo?",
+  "description": "A pothole and road defect reporting application. Users can report pothole roads by drawing paths using the route directions API on a dark mode map, and see reports from others.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}

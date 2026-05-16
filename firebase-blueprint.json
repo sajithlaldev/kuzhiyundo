@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "PotholeReport": {
+      "title": "PotholeReport",
+      "description": "A report of a pothole or road defect represented as a polyline.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who reported it."
+        },
+        "encodedPath": {
+          "type": "string",
+          "description": "The Google Maps encoded polyline string of the road segment."
+        },
+        "createdAt": {
+          "type": "timestamp"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["reported", "confirmed", "fixed"]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "address": {
+          "type": "string",
+          "description": "Optional human readable address"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes from the user"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Optional base64 encoded image or URL"
+        },
+        "upvoterIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of user UIDs who upvoted this report"
+        },
+        "downvoterIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of user UIDs who downvoted this report"
+        }
+      },
+      "required": ["userId", "encodedPath", "createdAt", "status", "severity"]
+    }
+  },
+  "firestore": {
+    "potholes": {
+      "schema": {
+        "$ref": "PotholeReport"
+      },
+      "description": "Reports of potholes on roads."
+    }
+  }
+}
