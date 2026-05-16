@@ -30,6 +30,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: kuzhiyundo # Update this to your actual Pages project name
+          projectName: kuzhiyundo
           directory: .vercel/output/static
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
