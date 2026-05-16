@@ -1000,17 +1000,34 @@ function ReportingOverlay({
                 </span>
               </div>
             </div>
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="md:hidden text-cyan-400 p-1 border border-cyan-500/30 rounded-sm bg-cyan-900/30 hover:bg-cyan-800/50 transition-colors"
-            >
-              <div
-                className="transition-transform duration-300"
-                style={{ transform: `rotate(${isExpanded ? 180 : 0}deg)` }}
+            <div className="md:hidden flex items-center gap-2">
+              {user ? (
+                <button
+                  onClick={() => setReportingMode(true)}
+                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
+                >
+                  <Plus className="w-3 h-3" /> Report
+                </button>
+              ) : (
+                <button
+                  onClick={loginWithGoogle}
+                  className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest transition-all"
+                >
+                  Sign In
+                </button>
+              )}
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-cyan-400 p-1 border border-cyan-500/30 rounded-sm bg-cyan-900/30 hover:bg-cyan-800/50 transition-colors"
               >
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </button>
+                <div
+                  className="transition-transform duration-300"
+                  style={{ transform: `rotate(${isExpanded ? 180 : 0}deg)` }}
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </button>
+            </div>
           </div>
 
           <div
