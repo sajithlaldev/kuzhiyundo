@@ -43,6 +43,7 @@
 **Backend & Data**
 - [Firebase Firestore](https://firebase.google.com/docs/firestore) (Database)
 - [Firebase Auth](https://firebase.google.com/docs/auth) (Google Provider Auth)
+- [Firebase App Check](https://firebase.google.com/docs/app-check) (reCAPTCHA v3 — protects Firestore & Auth from abuse)
 - [Firebase Storage](https://firebase.google.com/docs/storage) (Images/Blobs - optional per config)
 
 **External APIs**
@@ -80,6 +81,8 @@ Ensure you have the following installed on your local machine:
    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.firebasestorage.app
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
    NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+   NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your_recaptcha_v3_site_key
    ```
 
 4. **Run the development server:**
