@@ -31,6 +31,7 @@ if (
   });
 }
 
+// Auth and Firestore must be initialized after App Check
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 

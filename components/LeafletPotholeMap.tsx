@@ -1423,9 +1423,7 @@ function MapSearch() {
     }
     setIsSearching(true);
     try {
-      const res = await fetch(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(text)}&limit=5`,
-      );
+      const res = await fetch(`/api/search?q=${encodeURIComponent(text)}`);
       const data = await res.json();
       setResults(data.features || []);
     } catch (e) {
