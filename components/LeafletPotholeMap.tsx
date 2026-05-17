@@ -1425,7 +1425,7 @@ function MapSearch() {
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(text)}`);
       const data = await res.json();
-      setResults(data.features || []);
+      setResults(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -1433,9 +1433,8 @@ function MapSearch() {
     }
   };
 
-  const goToPlace = (feature: any) => {
-    const coords = feature.geometry.coordinates; // [lon, lat]
-    map.flyTo([coords[1], coords[0]], 15);
+  const goToPlace = (result: any) => {
+    map.flyTo([parseFloat(result.lat), parseFloat(result.lon)], 15);
     setShowResults(false);
     setQuery("");
   };
@@ -1462,14 +1461,14 @@ function MapSearch() {
                 className="w-full text-left px-3 py-2 hover:bg-cyan-900/40 text-cyan-400 text-xs flex flex-col border-b border-cyan-500/10 last:border-0"
               >
                 <span className="font-bold truncate w-full block">
-                  {r.properties.name || "Unknown"}
+                  {r.name || r.display_name?.split(",")[0] || "Unknown"}
                 </span>
                 <span className="text-[9px] text-cyan-500/60 truncate w-full block">
                   {[
-                    r.properties.street,
-                    r.properties.city,
-                    r.properties.state,
-                    r.properties.country,
+                    r.address?.road,
+                    r.address?.city || r.address?.town || r.address?.village,
+                    r.address?.state,
+                    r.address?.country,
                   ]
                     .filter(Boolean)
                     .join(", ") || "No address details"}
