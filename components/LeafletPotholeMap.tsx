@@ -346,7 +346,7 @@ function RenderReports({ reports }: { reports: any[] }) {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [constituencyMap, setConstituencyMap] = useState<Record<string, any>>({});
-  const [detailReport, setDetailReport] = useState<any | null>(null);
+  const [detailReportId, setDetailReportId] = useState<string | null>(null);
   const [showSignInVotePrompt, setShowSignInVotePrompt] = useState(false);
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
@@ -642,7 +642,7 @@ function RenderReports({ reports }: { reports: any[] }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setDetailReport({ ...report, _ac: report.acName ? report : constituencyMap[report.id] });
+                  setDetailReportId(report.id);
                 }}
                 className="w-full mt-1 py-1 text-[9px] uppercase tracking-widest text-cyan-400/70 hover:text-cyan-400 border-t border-cyan-500/20 hover:border-cyan-500/50 transition-all"
               >
@@ -916,16 +916,20 @@ function RenderReports({ reports }: { reports: any[] }) {
           }
         })}
 
-      {detailReport && (
-        <ReportDetailSheet
-          report={detailReport}
-          ac={detailReport._ac}
-          user={user}
-          onVote={handleVote}
-          onClose={() => setDetailReport(null)}
-
-        />
-      )}
+      {detailReportId && (() => {
+        const liveReport = reports.find((r) => r.id === detailReportId);
+        if (!liveReport) return null;
+        const ac = liveReport.acName ? liveReport : constituencyMap[liveReport.id];
+        return (
+          <ReportDetailSheet
+            report={liveReport}
+            ac={ac}
+            user={user}
+            onVote={handleVote}
+            onClose={() => setDetailReportId(null)}
+          />
+        );
+      })()}
 
       {showSignInVotePrompt && (
         <SignInToVoteModal onClose={() => setShowSignInVotePrompt(false)} />
