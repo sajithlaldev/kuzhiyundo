@@ -17,6 +17,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { motion, AnimatePresence } from "motion/react";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
+import { initClarity } from "../lib/clarity";
 import { useAuthStore } from "../lib/store";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -101,6 +102,8 @@ export default function LeafletPotholeMap() {
   const [currentPathEncoded, setCurrentPathEncoded] = useState<string | null>(
     null,
   );
+
+  useEffect(() => { initClarity(); }, []);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
