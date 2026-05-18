@@ -1209,6 +1209,13 @@ function ReportingOverlay({
     };
   }, [isExpanded]);
 
+  useEffect(() => {
+    if (overlayRef.current) {
+      L.DomEvent.disableClickPropagation(overlayRef.current);
+      L.DomEvent.disableScrollPropagation(overlayRef.current);
+    }
+  }, []);
+
   if (!reportingMode) {
     return (
       <>
@@ -1380,8 +1387,8 @@ function ReportingOverlay({
   }
 
   return (
-    <div className="absolute z-[9999] left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-max md:max-w-[90vw] flex flex-col items-center flex-nowrap font-mono" style={{ top: "max(1rem, env(safe-area-inset-top, 1rem))" }}>
-      <div className="bg-black/90 border border-cyan-500/60 w-full px-4 md:px-6 py-5 shadow-[0_0_25px_rgba(0,255,255,0.2)] backdrop-blur-md flex flex-col items-center text-center relative pointer-events-auto max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div ref={overlayRef} className="absolute z-[9999] left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-max md:max-w-[90vw] flex flex-col items-center flex-nowrap font-mono" style={{ top: "max(1rem, env(safe-area-inset-top, 1rem))" }}>
+      <div className="bg-black/90 border border-cyan-500/60 w-full px-4 md:px-6 py-5 shadow-[0_0_25px_rgba(0,255,255,0.2)] backdrop-blur-md flex flex-col items-center text-center relative pointer-events-auto max-h-[80vh] overflow-y-auto">
         <div className="absolute bottom-0 left-0 w-full h-[2px] bg-cyan-500 shadow-[0_0_10px_rgba(0,255,255,1)]"></div>
 
         {!origin ? (
