@@ -53,6 +53,9 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
+  Share2,
+  Link,
+  Copy,
 } from "lucide-react";
 
 // Fix default marker icon issues in Leaflet
@@ -1013,8 +1016,50 @@ function SignInToReportModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function MiniMapFitBounds({ path }: { path: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (path.length) map.fitBounds(L.latLngBounds(path), { padding: [20, 20], animate: false });
+  }, []);
+  return null;
+}
+
+function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: string }) {
+  const path = decode(encodedPath).map(([lat, lng]) => [lat, lng] as [number, number]);
+  if (!path.length) return null;
+  const lats = path.map(([lat]) => lat);
+  const lngs = path.map(([, lng]) => lng);
+  const center: [number, number] = [
+    (Math.min(...lats) + Math.max(...lats)) / 2,
+    (Math.min(...lngs) + Math.max(...lngs)) / 2,
+  ];
+  return (
+    <MapContainer
+      center={center}
+      zoom={16}
+      dragging={false}
+      zoomControl={false}
+      scrollWheelZoom={false}
+      touchZoom={false}
+      doubleClickZoom={false}
+      keyboard={false}
+      attributionControl={false}
+      style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)" }}
+    >
+      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+      <Polyline
+        positions={path}
+        pathOptions={{ color: getColor(severity), weight: 5, opacity: 0.9 }}
+      />
+      <MiniMapFitBounds path={path} />
+    </MapContainer>
+  );
+}
+
 function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
+  const [showShare, setShowShare] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (ac) return;
@@ -1036,6 +1081,23 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   const hasUpvoted = user && upvoters.includes(user.uid);
   const hasDownvoted = user && downvoters.includes(user.uid);
   const color = getColor(report.severity);
+
+  const shareText = `🚧 Pothole reported in ${report.address || "Unknown Location"}\nSeverity: ${(report.severity || "low").toUpperCase()} | Score: ${upvoters.length - downvoters.length > 0 ? "+" : ""}${upvoters.length - downvoters.length}\nReported on Kuzhiyundo`;
+  const shareUrl = "https://kuzhiyundo.com";
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: "Kuzhi Report", text: shareText, url: shareUrl }); } catch {}
+    } else {
+      setShowShare((v) => !v);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <>
@@ -1062,12 +1124,54 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               </div>
             )}
           </div>
-          <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400 ml-3 mt-1">
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2 ml-3 mt-1 shrink-0">
+            <button onClick={handleShare} className="text-cyan-500/50 hover:text-cyan-400">
+              <Share2 className="w-4 h-4" />
+            </button>
+            <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
+        {/* Share panel */}
+        {showShare && (
+          <div className="mx-4 mb-2 border border-cyan-500/30 bg-black/60 rounded p-3 flex flex-col gap-2">
+            <div className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-1">Share Report</div>
+            <div className="flex gap-2">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
+              >
+                WhatsApp
+              </a>
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
+              >
+                X / Twitter
+              </a>
+              <button
+                onClick={handleCopy}
+                className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
+              >
+                {copied ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="px-4 py-3 flex flex-col gap-3">
+          {/* Mini map */}
+          {report.encodedPath && (
+            <MiniMap encodedPath={report.encodedPath} severity={report.severity || "low"} />
+          )}
+
           {/* Severity + Status + Score */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="px-2 py-0.5 text-[9px] uppercase font-bold text-black" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}>
