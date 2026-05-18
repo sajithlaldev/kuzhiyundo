@@ -94,6 +94,7 @@ const redMarkerIcon = L.divIcon({
 export default function LeafletPotholeMap() {
   const [reports, setReports] = useState<any[]>([]);
   const [detailReportId, setDetailReportId] = useState<string | null>(null);
+  const [pendingDeepLinkId, setPendingDeepLinkId] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -140,7 +141,7 @@ export default function LeafletPotholeMap() {
           const id = params.get("id");
           if (id && data.some((r) => r.id === id)) {
             deepLinkHandled.current = true;
-            setDetailReportId(id);
+            setPendingDeepLinkId(id);
             window.history.replaceState({}, "", window.location.pathname);
           }
         }
@@ -184,7 +185,7 @@ export default function LeafletPotholeMap() {
         />
 
         {/* Existing Reports */}
-        <RenderReports reports={reports} detailReportId={detailReportId} setDetailReportId={setDetailReportId} />
+        <RenderReports reports={reports} detailReportId={detailReportId} setDetailReportId={setDetailReportId} pendingDeepLinkId={pendingDeepLinkId} setPendingDeepLinkId={setPendingDeepLinkId} />
 
         {/* Current Reporting Route — only after user confirms both points */}
         {reportingMode && origin && destination && (
@@ -366,7 +367,7 @@ function RouteDisplay({
   );
 }
 
-function RenderReports({ reports, detailReportId, setDetailReportId }: { reports: any[]; detailReportId: string | null; setDetailReportId: (id: string | null) => void }) {
+function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeepLinkId, setPendingDeepLinkId }: { reports: any[]; detailReportId: string | null; setDetailReportId: (id: string | null) => void; pendingDeepLinkId: string | null; setPendingDeepLinkId: (id: string | null) => void }) {
   const user = useAuthStore((state) => state.user);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -381,6 +382,24 @@ function RenderReports({ reports, detailReportId, setDetailReportId }: { reports
   const [showSignInVotePrompt, setShowSignInVotePrompt] = useState(false);
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
+
+  useEffect(() => {
+    if (!pendingDeepLinkId) return;
+    const report = reports.find((r) => r.id === pendingDeepLinkId);
+    if (!report) return;
+    const openPopup = () => {
+      setDetailReportId(pendingDeepLinkId);
+      setPendingDeepLinkId(null);
+    };
+    if (report.encodedPath) {
+      const path = decode(report.encodedPath) as [number, number][];
+      const bounds = L.latLngBounds(path);
+      map.flyToBounds(bounds, { padding: [80, 80], duration: 1.2 });
+      map.once("moveend", openPopup);
+    } else {
+      openPopup();
+    }
+  }, [pendingDeepLinkId]);
 
   useMapEvents({
     zoomend() {
