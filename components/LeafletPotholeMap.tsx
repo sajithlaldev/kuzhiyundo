@@ -1023,7 +1023,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   return (
     <>
       <div className="fixed inset-0 z-[2500] bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]">
+      <div className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]" onClick={(e) => e.stopPropagation()}>
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1 sticky top-0">
           <div className="w-10 h-1 rounded-full bg-cyan-500/30" />
