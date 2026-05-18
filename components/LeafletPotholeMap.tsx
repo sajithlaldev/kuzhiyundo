@@ -346,6 +346,7 @@ function RenderReports({ reports }: { reports: any[] }) {
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [constituencyMap, setConstituencyMap] = useState<Record<string, any>>({});
   const [detailReport, setDetailReport] = useState<any | null>(null);
+  const [showSignInVotePrompt, setShowSignInVotePrompt] = useState(false);
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
 
@@ -452,7 +453,7 @@ function RenderReports({ reports }: { reports: any[] }) {
     currentDownvoters: string[],
   ) => {
     if (!user) {
-      alert("Please login to vote");
+      setShowSignInVotePrompt(true);
       return;
     }
     try {
@@ -923,6 +924,41 @@ function RenderReports({ reports }: { reports: any[] }) {
           onClose={() => setDetailReport(null)}
         />
       )}
+
+      {showSignInVotePrompt && (
+        <SignInToVoteModal onClose={() => setShowSignInVotePrompt(false)} />
+      )}
+    </>
+  );
+}
+
+function SignInToVoteModal({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[2600] bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-black/95 border border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="text-[9px] uppercase tracking-widest text-cyan-500/60">Sign in required</div>
+          <button onClick={onClose} className="text-cyan-500/40 hover:text-cyan-400 -mt-0.5">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1">
+          <div className="text-sm font-bold text-cyan-400">Vote on reports</div>
+          <p className="text-[11px] text-cyan-400/70 leading-relaxed">
+            Sign in to confirm or dispute pothole reports. Your identity is only used to prevent duplicate votes — it is never shared or displayed publicly.
+          </p>
+        </div>
+        <button
+          onClick={() => { loginWithGoogle(); onClose(); }}
+          className="w-full py-2.5 text-[11px] font-bold uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 transition-colors rounded"
+        >
+          Sign in with Google
+        </button>
+      </div>
     </>
   );
 }
