@@ -345,6 +345,7 @@ function RenderReports({ reports }: { reports: any[] }) {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [constituencyMap, setConstituencyMap] = useState<Record<string, any>>({});
+  const [detailReport, setDetailReport] = useState<any | null>(null);
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
 
@@ -368,7 +369,7 @@ function RenderReports({ reports }: { reports: any[] }) {
       const [lat, lng] = path[0];
       const info = await getConstituency(lat, lng);
       setConstituencyMap((prev) => ({ ...prev, [report.id]: info }));
-    } catch {}
+    } catch { }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -636,6 +637,16 @@ function RenderReports({ reports }: { reports: any[] }) {
                   </button>
                 </div>
               </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDetailReport({ ...report, _ac: report.acName ? report : constituencyMap[report.id] });
+                }}
+                className="w-full mt-1 py-1 text-[9px] uppercase tracking-widest text-cyan-400/70 hover:text-cyan-400 border-t border-cyan-500/20 hover:border-cyan-500/50 transition-all"
+              >
+                Expand ↓
+              </button>
             </>
           )}
 
@@ -903,6 +914,147 @@ function RenderReports({ reports }: { reports: any[] }) {
             return null;
           }
         })}
+
+      {detailReport && (
+        <ReportDetailSheet
+          report={detailReport}
+          ac={detailReport._ac}
+          user={user}
+          onVote={handleVote}
+          onClose={() => setDetailReport(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function ReportDetailSheet({ report, ac, user, onVote, onClose }: any) {
+  const upvoters = report.upvoterIds || [];
+  const downvoters = report.downvoterIds || [];
+  const hasUpvoted = user && upvoters.includes(user.uid);
+  const hasDownvoted = user && downvoters.includes(user.uid);
+  const color = getColor(report.severity);
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[2500] bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed bottom-0 left-0 right-0 z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]">
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-cyan-500/30" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-4 pt-2 pb-3 border-b border-cyan-500/20">
+          <div>
+            <div className="text-[9px] uppercase tracking-widest text-cyan-500/60 mb-1">Kuzhi Report</div>
+            <div className="text-sm font-bold text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
+            {ac && (
+              <div className="text-[10px] text-orange-400/80 mt-0.5">
+                {ac.acName} AC · {ac.pcName} PC
+              </div>
+            )}
+          </div>
+          <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400 ml-3 mt-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-4 py-3 flex flex-col gap-3">
+
+          {/* Severity + Status + Score */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="px-2 py-0.5 text-[9px] uppercase font-bold text-black"
+              style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+            >
+              {report.severity?.toUpperCase() || "LOW"}
+            </span>
+            <span className="px-2 py-0.5 text-[9px] uppercase font-bold border border-cyan-500/50 text-cyan-400">
+              {report.status?.toUpperCase() || "REPORTED"}
+            </span>
+            <span className="text-[9px] text-cyan-500/60 ml-auto">
+              Score: <span className={upvoters.length - downvoters.length < 0 ? "text-red-400" : "text-cyan-400"}>
+                {upvoters.length - downvoters.length > 0 ? "+" : ""}{upvoters.length - downvoters.length}
+              </span>
+            </span>
+          </div>
+
+          {/* Image */}
+          {report.imageUrl && (
+            <div className="w-full rounded border border-cyan-500/30 overflow-hidden">
+              <img src={report.imageUrl} alt="Pothole" className="w-full object-cover max-h-48" />
+            </div>
+          )}
+
+          {/* Details grid */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
+            <div>
+              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Reported By</div>
+              <div className="text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
+            </div>
+            <div>
+              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
+              <div className="text-cyan-300 font-bold">
+                {report.createdAt
+                  ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                  : "—"}
+              </div>
+            </div>
+            {report.district && (
+              <div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
+                <div className="text-cyan-300 font-bold">{report.district}</div>
+              </div>
+            )}
+            {ac && (
+              <div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Constituency</div>
+                <div className="text-orange-400 font-bold">{ac.acName} (#{ac.acNo})</div>
+              </div>
+            )}
+            <div>
+              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Upvotes</div>
+              <div className="text-cyan-300 font-bold">{upvoters.length}</div>
+            </div>
+            <div>
+              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Downvotes</div>
+              <div className="text-cyan-300 font-bold">{downvoters.length}</div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {report.notes && (
+            <div className="border-l-2 border-cyan-500/40 pl-3 text-[11px] text-cyan-400/80 italic leading-relaxed">
+              "{report.notes}"
+            </div>
+          )}
+
+          {/* Vote buttons */}
+          <div className="flex gap-2 pt-1 border-t border-cyan-500/20">
+            <button
+              onClick={(e) => { e.stopPropagation(); onVote(report.id, "up", upvoters, downvoters); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasUpvoted ? "border-cyan-400 bg-cyan-900/50 text-cyan-400" : "border-cyan-500/30 text-cyan-500/50 hover:bg-cyan-900/30 hover:text-cyan-400"}`}
+            >
+              <ThumbsUp className={`w-3 h-3 ${hasUpvoted ? "fill-cyan-400" : ""}`} />
+              Confirm ({upvoters.length})
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onVote(report.id, "down", upvoters, downvoters); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasDownvoted ? "border-red-500 bg-red-900/50 text-red-500" : "border-cyan-500/30 text-cyan-500/50 hover:bg-red-900/30 hover:text-red-500"}`}
+            >
+              <ThumbsDown className={`w-3 h-3 ${hasDownvoted ? "fill-red-500" : ""}`} />
+              Dispute ({downvoters.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Safe area padding */}
+        <div className="h-[env(safe-area-inset-bottom,12px)]" />
+      </div>
     </>
   );
 }
@@ -1248,9 +1400,9 @@ function SubmitRouteForm({
             setAddress(data.display_name || "Unknown Location");
             setDistrict(
               data.address?.state_district ||
-                data.address?.county ||
-                data.address?.city_district ||
-                null,
+              data.address?.county ||
+              data.address?.city_district ||
+              null,
             );
           }
         })
@@ -1287,9 +1439,9 @@ function SubmitRouteForm({
       if (notes.trim()) payload.notes = notes.trim();
       if (imageUrl) payload.imageUrl = imageUrl;
       if (constituency) {
-        payload.acName   = constituency.acName;
-        payload.acNo     = constituency.acNo;
-        payload.pcName   = constituency.pcName;
+        payload.acName = constituency.acName;
+        payload.acNo = constituency.acNo;
+        payload.pcName = constituency.pcName;
       }
 
       await addDoc(collection(db, "potholes"), payload);
