@@ -17,6 +17,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { motion, AnimatePresence } from "motion/react";
 import { Root as DrawerRoot, Portal as DrawerPortal, Overlay as DrawerOverlay, Content as DrawerContent } from "vaul";
+import { Title as DrawerTitle, Description as DrawerDescription } from "@radix-ui/react-dialog";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
 import { fetchWithAppCheck } from "../lib/appcheck-fetch";
 import { initClarity } from "../lib/clarity";
@@ -1039,6 +1040,8 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose, map }
       <DrawerPortal>
         <DrawerOverlay className="fixed inset-0 z-[2500] bg-black/50 backdrop-blur-sm" />
         <DrawerContent className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono flex flex-col shadow-[0_-8px_40px_rgba(0,255,255,0.1)] outline-none">
+          <DrawerTitle className="sr-only">Kuzhi Report</DrawerTitle>
+          <DrawerDescription className="sr-only">Pothole report details</DrawerDescription>
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-10 h-1 rounded-full bg-cyan-500/30" />
@@ -1399,6 +1402,8 @@ function ReportingOverlay({
       <DrawerPortal>
         {/* No overlay — map must stay interactive */}
         <DrawerContent className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[9999] bg-black/95 border-t border-cyan-500/60 rounded-t-2xl font-mono flex flex-col shadow-[0_-8px_40px_rgba(0,255,255,0.2)] outline-none">
+          <DrawerTitle className="sr-only">Report a Pothole</DrawerTitle>
+          <DrawerDescription className="sr-only">Mark the start and end points of the pothole on the map</DrawerDescription>
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-10 h-1 rounded-full bg-cyan-500/30" />
