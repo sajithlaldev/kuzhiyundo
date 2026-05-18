@@ -1684,26 +1684,63 @@ function MapSearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
+  const normalizeSearchResults = (data: any) => {
+    const items = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.predictions)
+        ? data.predictions
+        : [];
+
+    return items
+      .map((item: any) => {
+        const lat = item.lat ?? item.geometry?.location?.lat;
+        const lon = item.lon ?? item.lng ?? item.geometry?.location?.lng;
+        const terms = item.terms ?? [];
+
+        return {
+          ...item,
+          display_name: item.display_name ?? item.description ?? "",
+          name: item.name ?? item.structured_formatting?.main_text,
+          lat: String(lat ?? ""),
+          lon: String(lon ?? ""),
+          address: item.address ?? {
+            road: terms[0]?.value,
+            city: terms[1]?.value,
+            state: terms.at(-3)?.value,
+            country: terms.at(-1)?.value,
+          },
+        };
+      })
+      .filter((item: any) => Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lon)));
+  };
+
   const searchPlaces = async (text: string) => {
     setQuery(text);
     if (!text.trim()) {
       setResults([]);
+      setShowResults(false);
       return;
     }
+    setShowResults(true);
     setIsSearching(true);
     try {
       const res = await fetchWithAppCheck(`/api/search?q=${encodeURIComponent(text)}`);
       const data = await res.json();
-      setResults(Array.isArray(data) ? data : []);
+      setResults(normalizeSearchResults(data));
     } catch (e) {
       console.error(e);
+      setResults([]);
     } finally {
       setIsSearching(false);
     }
   };
 
   const goToPlace = (result: any) => {
-    map.flyTo([parseFloat(result.lat), parseFloat(result.lon)], 15);
+    const lat = Number(result.lat);
+    const lon = Number(result.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+    map.flyTo([lat, lon], 15);
     setShowResults(false);
     setQuery("");
   };
@@ -1734,14 +1771,7 @@ function MapSearch() {
                   {r.name || r.display_name?.split(",")[0] || "Unknown"}
                 </span>
                 <span className="text-[9px] text-cyan-500/60 truncate w-full block">
-                  {[
-                    r.address?.road,
-                    r.address?.city || r.address?.town || r.address?.village,
-                    r.address?.state,
-                    r.address?.country,
-                  ]
-                    .filter(Boolean)
-                    .join(", ") || "No address details"}
+                  {r.subtitle || r.display_name || ""}
                 </span>
               </button>
             ))}

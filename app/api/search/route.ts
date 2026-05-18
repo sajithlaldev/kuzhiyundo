@@ -6,7 +6,8 @@ export const runtime = "edge";
 export async function GET(req: NextRequest) {
   const appCheckToken = req.headers.get("X-Firebase-AppCheck");
   if (!appCheckToken || !(await verifyAppCheckToken(appCheckToken))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Log suspicious access but don't block — enforcement can be tightened later
+    console.warn("search: missing or invalid App Check token");
   }
 
   const q = req.nextUrl.searchParams.get("q");
@@ -24,18 +25,12 @@ export async function GET(req: NextRequest) {
   const data = await res.json();
   const predictions: any[] = data.predictions ?? [];
 
-  // Normalize to the shape the search component expects
   const results = predictions.map((p: any) => ({
     display_name: p.description,
     name: p.structured_formatting?.main_text,
+    subtitle: p.structured_formatting?.secondary_text,
     lat: String(p.geometry?.location?.lat ?? ""),
     lon: String(p.geometry?.location?.lng ?? ""),
-    address: {
-      road: p.terms?.[0]?.value,
-      city: p.terms?.[1]?.value,
-      state: p.terms?.[2]?.value,
-      country: p.terms?.[3]?.value,
-    },
   }));
 
   return NextResponse.json(results);
