@@ -16,6 +16,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { motion, AnimatePresence } from "motion/react";
+import { Root as DrawerRoot, Portal as DrawerPortal, Overlay as DrawerOverlay, Content as DrawerContent } from "vaul";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
 import { fetchWithAppCheck } from "../lib/appcheck-fetch";
 import { initClarity } from "../lib/clarity";
@@ -225,7 +226,7 @@ function ReportsMarquee({ reports }: { reports: any[] }) {
   );
 
   return (
-    <div className="absolute bottom-0 left-0 w-full bg-black/90 border-t border-cyan-500/50 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] z-[2000] overflow-hidden font-mono flex pointer-events-none">
+    <div className="absolute bottom-0 left-0 w-full bg-black/90 border-t border-cyan-500/50 pt-2.5 z-[2000] overflow-hidden font-mono flex pointer-events-none" style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}>
       <div className="flex animate-marquee shrink-0 items-center justify-around min-w-full">
         {latestReports.map((report) => (
           <MarqueeItem key={`mq1-${report.id}`} report={report} />
@@ -923,6 +924,7 @@ function RenderReports({ reports }: { reports: any[] }) {
           user={user}
           onVote={handleVote}
           onClose={() => setDetailReport(null)}
+          map={map}
         />
       )}
 
@@ -995,7 +997,7 @@ function SignInToReportModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
+function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose, map }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
 
   useEffect(() => {
@@ -1013,6 +1015,19 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
     })();
   }, [report.encodedPath]);
 
+  useEffect(() => {
+    if (!map || !report.encodedPath) return;
+    (async () => {
+      try {
+        const { decode } = await import("@googlemaps/polyline-codec");
+        const path = decode(report.encodedPath).map(([lat, lng]: [number, number]) => [lat, lng] as [number, number]);
+        if (!path.length) return;
+        const bounds = L.latLngBounds(path);
+        map.flyToBounds(bounds, { maxZoom: 16, paddingBottomRight: [0, window.innerHeight * 0.55], paddingTopLeft: [40, 80], duration: 1 });
+      } catch {}
+    })();
+  }, []);
+
   const upvoters = report.upvoterIds || [];
   const downvoters = report.downvoterIds || [];
   const hasUpvoted = user && upvoters.includes(user.uid);
@@ -1020,146 +1035,144 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   const color = getColor(report.severity);
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-[2500] bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]">
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-cyan-500/30" />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-start justify-between px-4 pt-2 pb-3 border-b border-cyan-500/20">
-          <div>
-            <div className="text-[9px] uppercase tracking-widest text-cyan-500/60 mb-1">Kuzhi Report</div>
-            <div className="text-sm font-bold text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
-            {ac && (
-              <div className="flex flex-col gap-0.5 mt-0.5">
-                {ac.lsgdLabel && (
-                  <div className="text-[10px] text-orange-400/80">{ac.lsgdLabel}</div>
-                )}
-                {ac.acName && (
-                  <div className="text-[10px] text-orange-400/60">
-                    {ac.acName} AC{ac.pcName ? ` · ${ac.pcName} PC` : ""}
+    <DrawerRoot open snapPoints={[0.5, 0.95]} activeSnapPoint={0.5} onOpenChange={(o: boolean) => !o && onClose()}>
+      <DrawerPortal>
+        <DrawerOverlay className="fixed inset-0 z-[2500] bg-black/50 backdrop-blur-sm" />
+        <DrawerContent className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono flex flex-col shadow-[0_-8px_40px_rgba(0,255,255,0.1)] outline-none">
+          {/* Handle */}
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-cyan-500/30" />
+          </div>
+          {/* Scrollable content */}
+          <div className="overflow-y-auto flex-1 pb-[env(safe-area-inset-bottom,12px)]">
+            {/* Header */}
+            <div className="flex items-start justify-between px-4 pt-2 pb-3 border-b border-cyan-500/20">
+              <div>
+                <div className="text-[9px] uppercase tracking-widest text-cyan-500/60 mb-1">Kuzhi Report</div>
+                <div className="text-sm font-bold text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
+                {ac && (
+                  <div className="flex flex-col gap-0.5 mt-0.5">
+                    {ac.lsgdLabel && (
+                      <div className="text-[10px] text-orange-400/80">{ac.lsgdLabel}</div>
+                    )}
+                    {ac.acName && (
+                      <div className="text-[10px] text-orange-400/60">
+                        {ac.acName} AC{ac.pcName ? ` · ${ac.pcName} PC` : ""}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+              <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400 ml-3 mt-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-4 py-3 flex flex-col gap-3">
+
+              {/* Severity + Status + Score */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="px-2 py-0.5 text-[9px] uppercase font-bold text-black"
+                  style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+                >
+                  {report.severity?.toUpperCase() || "LOW"}
+                </span>
+                <span className="px-2 py-0.5 text-[9px] uppercase font-bold border border-cyan-500/50 text-cyan-400">
+                  {report.status?.toUpperCase() || "REPORTED"}
+                </span>
+                <span className="text-[9px] text-cyan-500/60 ml-auto">
+                  Score: <span className={upvoters.length - downvoters.length < 0 ? "text-red-400" : "text-cyan-400"}>
+                    {upvoters.length - downvoters.length > 0 ? "+" : ""}{upvoters.length - downvoters.length}
+                  </span>
+                </span>
+              </div>
+
+              {/* Image */}
+              {report.imageUrl && (
+                <div className="w-full rounded border border-cyan-500/30 overflow-hidden">
+                  <img src={report.imageUrl} alt="Pothole" className="w-full object-cover max-h-48" />
+                </div>
+              )}
+
+              {/* Details grid */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
+                <div>
+                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Reported By</div>
+                  <div className="text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
+                </div>
+                <div>
+                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
+                  <div className="text-cyan-300 font-bold">
+                    {report.createdAt
+                      ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                      : "—"}
+                  </div>
+                </div>
+                {report.district && (
+                  <div>
+                    <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
+                    <div className="text-cyan-300 font-bold">{report.district}</div>
+                  </div>
+                )}
+                {ac?.lsgdLabel && (
+                  <div>
+                    <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Local Body</div>
+                    <div className="text-orange-400 font-bold">{ac.lsgdLabel}</div>
+                    {ac.lsgdType && <div className="text-cyan-500/50 text-[9px]">{ac.lsgdType}</div>}
+                  </div>
+                )}
+                {ac?.acName && (
+                  <div>
+                    <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Constituency</div>
+                    <div className="text-orange-400 font-bold">{ac.acName} (#{ac.acNo})</div>
+                  </div>
+                )}
+                {ac?.pcName && (
+                  <div>
+                    <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Parliament</div>
+                    <div className="text-orange-400 font-bold">{ac.pcName}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Upvotes</div>
+                  <div className="text-cyan-300 font-bold">{upvoters.length}</div>
+                </div>
+                <div>
+                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Downvotes</div>
+                  <div className="text-cyan-300 font-bold">{downvoters.length}</div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {report.notes && (
+                <div className="border-l-2 border-cyan-500/40 pl-3 text-[11px] text-cyan-400/80 italic leading-relaxed">
+                  "{report.notes}"
+                </div>
+              )}
+
+              {/* Vote buttons */}
+              <div className="flex gap-2 pt-1 border-t border-cyan-500/20">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onVote(report.id, "up", upvoters, downvoters); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasUpvoted ? "border-cyan-400 bg-cyan-900/50 text-cyan-400" : "border-cyan-500/30 text-cyan-500/50 hover:bg-cyan-900/30 hover:text-cyan-400"}`}
+                >
+                  <ThumbsUp className={`w-3 h-3 ${hasUpvoted ? "fill-cyan-400" : ""}`} />
+                  Confirm ({upvoters.length})
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onVote(report.id, "down", upvoters, downvoters); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasDownvoted ? "border-red-500 bg-red-900/50 text-red-500" : "border-cyan-500/30 text-cyan-500/50 hover:bg-red-900/30 hover:text-red-500"}`}
+                >
+                  <ThumbsDown className={`w-3 h-3 ${hasDownvoted ? "fill-red-500" : ""}`} />
+                  Dispute ({downvoters.length})
+                </button>
+              </div>
+            </div>
           </div>
-          <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400 ml-3 mt-1">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="px-4 py-3 flex flex-col gap-3">
-
-          {/* Severity + Status + Score */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className="px-2 py-0.5 text-[9px] uppercase font-bold text-black"
-              style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
-            >
-              {report.severity?.toUpperCase() || "LOW"}
-            </span>
-            <span className="px-2 py-0.5 text-[9px] uppercase font-bold border border-cyan-500/50 text-cyan-400">
-              {report.status?.toUpperCase() || "REPORTED"}
-            </span>
-            <span className="text-[9px] text-cyan-500/60 ml-auto">
-              Score: <span className={upvoters.length - downvoters.length < 0 ? "text-red-400" : "text-cyan-400"}>
-                {upvoters.length - downvoters.length > 0 ? "+" : ""}{upvoters.length - downvoters.length}
-              </span>
-            </span>
-          </div>
-
-          {/* Image */}
-          {report.imageUrl && (
-            <div className="w-full rounded border border-cyan-500/30 overflow-hidden">
-              <img src={report.imageUrl} alt="Pothole" className="w-full object-cover max-h-48" />
-            </div>
-          )}
-
-          {/* Details grid */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
-            <div>
-              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Reported By</div>
-              <div className="text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
-            </div>
-            <div>
-              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
-              <div className="text-cyan-300 font-bold">
-                {report.createdAt
-                  ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-                  : "—"}
-              </div>
-            </div>
-            {report.district && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
-                <div className="text-cyan-300 font-bold">{report.district}</div>
-              </div>
-            )}
-            {ac?.lsgdLabel && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Local Body</div>
-                <div className="text-orange-400 font-bold">{ac.lsgdLabel}</div>
-                {ac.lsgdType && <div className="text-cyan-500/50 text-[9px]">{ac.lsgdType}</div>}
-              </div>
-            )}
-            {ac?.acName && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Constituency</div>
-                <div className="text-orange-400 font-bold">{ac.acName} (#{ac.acNo})</div>
-              </div>
-            )}
-            {ac?.pcName && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Parliament</div>
-                <div className="text-orange-400 font-bold">{ac.pcName}</div>
-              </div>
-            )}
-            <div>
-              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Upvotes</div>
-              <div className="text-cyan-300 font-bold">{upvoters.length}</div>
-            </div>
-            <div>
-              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Downvotes</div>
-              <div className="text-cyan-300 font-bold">{downvoters.length}</div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          {report.notes && (
-            <div className="border-l-2 border-cyan-500/40 pl-3 text-[11px] text-cyan-400/80 italic leading-relaxed">
-              "{report.notes}"
-            </div>
-          )}
-
-          {/* Vote buttons */}
-          <div className="flex gap-2 pt-1 border-t border-cyan-500/20">
-            <button
-              onClick={(e) => { e.stopPropagation(); onVote(report.id, "up", upvoters, downvoters); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasUpvoted ? "border-cyan-400 bg-cyan-900/50 text-cyan-400" : "border-cyan-500/30 text-cyan-500/50 hover:bg-cyan-900/30 hover:text-cyan-400"}`}
-            >
-              <ThumbsUp className={`w-3 h-3 ${hasUpvoted ? "fill-cyan-400" : ""}`} />
-              Confirm ({upvoters.length})
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onVote(report.id, "down", upvoters, downvoters); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasDownvoted ? "border-red-500 bg-red-900/50 text-red-500" : "border-cyan-500/30 text-cyan-500/50 hover:bg-red-900/30 hover:text-red-500"}`}
-            >
-              <ThumbsDown className={`w-3 h-3 ${hasDownvoted ? "fill-red-500" : ""}`} />
-              Dispute ({downvoters.length})
-            </button>
-          </div>
-        </div>
-
-        {/* Safe area padding */}
-        <div className="h-[env(safe-area-inset-bottom,12px)]" />
-      </div>
-    </>
+        </DrawerContent>
+      </DrawerPortal>
+    </DrawerRoot>
   );
 }
 
@@ -1292,7 +1305,7 @@ function ReportingOverlay({
                 </span>
               </div>
             </div>
-            <div className="md:hidden flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
                 className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
@@ -1301,7 +1314,7 @@ function ReportingOverlay({
               </button>
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="text-cyan-400 p-1 border border-cyan-500/30 rounded-sm bg-cyan-900/30 hover:bg-cyan-800/50 transition-colors"
+                className="md:hidden text-cyan-400 p-1 border border-cyan-500/30 rounded-sm bg-cyan-900/30 hover:bg-cyan-800/50 transition-colors"
               >
                 <div
                   className="transition-transform duration-300"
@@ -1369,51 +1382,58 @@ function ReportingOverlay({
     );
   }
 
+  const [activeSnap, setActiveSnap] = useState<string | number>("180px");
+  useEffect(() => {
+    if (currentPathEncoded) setActiveSnap(0.5);
+    else setActiveSnap("180px");
+  }, [currentPathEncoded]);
+
   return (
-    <div className="absolute z-[9999] left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-max md:max-w-[90vw] flex flex-col items-center flex-nowrap font-mono" style={{ top: "max(1rem, env(safe-area-inset-top, 1rem))" }}>
-      <div className="bg-black/90 border border-cyan-500/60 w-full px-4 md:px-6 py-5 shadow-[0_0_25px_rgba(0,255,255,0.2)] backdrop-blur-md flex flex-col items-center text-center relative pointer-events-auto">
-        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-cyan-500 shadow-[0_0_10px_rgba(0,255,255,1)]"></div>
-
-        {!origin ? (
-          <>
-            <Navigation className="w-6 h-6 text-cyan-400 mb-3 animate-pulse" />
-            <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">
-              Step 1: Start Point
-            </h3>
-            <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest">
-              &gt; tap map where kuzhi starts
-            </p>
-          </>
-        ) : !destination ? (
-          <>
-            <Navigation className="w-6 h-6 text-cyan-400 mb-3 animate-pulse" />
-            <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">
-              Step 2: End Point
-            </h3>
-            <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest">
-              &gt; tap map where kuzhi ends
-            </p>
-          </>
-        ) : (
-          <SubmitRouteForm
-            currentPathEncoded={currentPathEncoded}
-            origin={origin}
-            severity={severity}
-            setSeverity={setSeverity}
-            onCancel={onCancel}
-          />
-        )}
-
-        {(!origin || !destination) && (
-          <button
-            onClick={onCancel}
-            className="mt-6 text-[10px] text-cyan-500/50 hover:text-red-400 uppercase tracking-widest transition-colors"
-          >
-            [ CANCEL ]
-          </button>
-        )}
-      </div>
-    </div>
+    <DrawerRoot
+      open
+      modal={false}
+      dismissible={false}
+      snapPoints={["180px", 0.5, 0.95]}
+      activeSnapPoint={activeSnap}
+      setActiveSnapPoint={(snap) => snap != null && setActiveSnap(snap)}
+    >
+      <DrawerPortal>
+        {/* No overlay — map must stay interactive */}
+        <DrawerContent className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[9999] bg-black/95 border-t border-cyan-500/60 rounded-t-2xl font-mono flex flex-col shadow-[0_-8px_40px_rgba(0,255,255,0.2)] outline-none">
+          {/* Handle */}
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-cyan-500/30" />
+          </div>
+          <div className="overflow-y-auto flex-1 pb-[env(safe-area-inset-bottom,12px)]">
+            <div className="flex flex-col items-center text-center px-4 py-4">
+              {!origin ? (
+                <>
+                  <Navigation className="w-6 h-6 text-cyan-400 mb-3 animate-pulse" />
+                  <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Step 1: Start Point</h3>
+                  <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest">&gt; tap map where kuzhi starts</p>
+                  <button onClick={onCancel} className="mt-6 text-[10px] text-cyan-500/50 hover:text-red-400 uppercase tracking-widest transition-colors">[ CANCEL ]</button>
+                </>
+              ) : !destination ? (
+                <>
+                  <Navigation className="w-6 h-6 text-cyan-400 mb-3 animate-pulse" />
+                  <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Step 2: End Point</h3>
+                  <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest">&gt; tap map where kuzhi ends</p>
+                  <button onClick={onCancel} className="mt-6 text-[10px] text-cyan-500/50 hover:text-red-400 uppercase tracking-widest transition-colors">[ CANCEL ]</button>
+                </>
+              ) : (
+                <SubmitRouteForm
+                  currentPathEncoded={currentPathEncoded}
+                  origin={origin}
+                  severity={severity}
+                  setSeverity={setSeverity}
+                  onCancel={onCancel}
+                />
+              )}
+            </div>
+          </div>
+        </DrawerContent>
+      </DrawerPortal>
+    </DrawerRoot>
   );
 }
 
