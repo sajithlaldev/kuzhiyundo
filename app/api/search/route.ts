@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(
     `https://api.olamaps.io/places/v1/autocomplete?input=${encodeURIComponent(q)}&api_key=${apiKey}`,
+    { headers: { Origin: "https://kuzhiyundo.com" } },
   );
 
   if (!res.ok) return NextResponse.json([]);
