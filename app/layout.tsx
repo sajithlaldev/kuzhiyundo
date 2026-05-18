@@ -11,12 +11,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
 };
 
 export const metadata: Metadata = {
   title: 'Kuzhiyundo? | Avoid Potholes',
   description: 'Community-driven pothole tracking mapping. Report and avoid kuzhis (potholes) in your area with our interactive map.',
   keywords: 'potholes, road conditions, traffic, map, community tracking, kuzhi, Kerala roads',
+  metadataBase: new URL('https://kuzhiyundo.com'),
   openGraph: {
     title: 'Kuzhiyundo? | Avoid Potholes',
     description: 'Community-driven pothole tracking mapping. Report and avoid kuzhis (potholes) in your area with our interactive map.',
@@ -24,11 +26,20 @@ export const metadata: Metadata = {
     siteName: 'Kuzhiyundo?',
     locale: 'en_IN',
     type: 'website',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'Kuzhiyundo? — Community Pothole Tracker for Kerala',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kuzhiyundo? | Avoid Potholes',
     description: 'Community-driven pothole tracking map. Report and avoid kuzhis.',
+    images: ['/twitter-image'],
   },
   icons: {
     icon: '/favicon.svg',

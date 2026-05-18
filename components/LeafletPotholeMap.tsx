@@ -15,6 +15,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { motion, AnimatePresence } from "motion/react";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
 import { fetchWithAppCheck } from "../lib/appcheck-fetch";
@@ -90,6 +91,7 @@ const redMarkerIcon = L.divIcon({
 
 export default function LeafletPotholeMap() {
   const [reports, setReports] = useState<any[]>([]);
+  const [detailReportId, setDetailReportId] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -119,6 +121,8 @@ export default function LeafletPotholeMap() {
     return () => unsubscribeAuth();
   }, [setUser]);
 
+  const deepLinkHandled = useRef(false);
+
   useEffect(() => {
     const q = query(collection(db, "potholes"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(
@@ -129,6 +133,15 @@ export default function LeafletPotholeMap() {
           ...doc.data(),
         }));
         setReports(data);
+        if (!deepLinkHandled.current) {
+          const params = new URLSearchParams(window.location.search);
+          const id = params.get("id");
+          if (id && data.some((r) => r.id === id)) {
+            deepLinkHandled.current = true;
+            setDetailReportId(id);
+            window.history.replaceState({}, "", window.location.pathname);
+          }
+        }
       },
       (error) => {
         console.error("Firestore Error: ", error);
@@ -169,7 +182,7 @@ export default function LeafletPotholeMap() {
         />
 
         {/* Existing Reports */}
-        <RenderReports reports={reports} />
+        <RenderReports reports={reports} detailReportId={detailReportId} setDetailReportId={setDetailReportId} />
 
         {/* Current Reporting Route — only after user confirms both points */}
         {reportingMode && origin && destination && (
@@ -351,7 +364,7 @@ function RouteDisplay({
   );
 }
 
-function RenderReports({ reports }: { reports: any[] }) {
+function RenderReports({ reports, detailReportId, setDetailReportId }: { reports: any[]; detailReportId: string | null; setDetailReportId: (id: string | null) => void }) {
   const user = useAuthStore((state) => state.user);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -363,7 +376,6 @@ function RenderReports({ reports }: { reports: any[] }) {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [constituencyMap, setConstituencyMap] = useState<Record<string, any>>({});
-  const [detailReportId, setDetailReportId] = useState<string | null>(null);
   const [showSignInVotePrompt, setShowSignInVotePrompt] = useState(false);
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
@@ -1017,90 +1029,134 @@ function SignInToReportModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function MiniMapFitBounds({ path }: { path: [number, number][] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (path.length) map.fitBounds(L.latLngBounds(path), { padding: [20, 20], animate: false });
-  }, []);
-  return null;
-}
-
-function MiniMapOrbit({ path, active }: { path: [number, number][]; active: boolean }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!active) {
-      if (path.length) map.fitBounds(L.latLngBounds(path), { padding: [20, 20], animate: true });
-      return;
-    }
-    const lats = path.map(([lat]) => lat);
-    const lngs = path.map(([, lng]) => lng);
-    const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-    const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
-    const spread = Math.max(
-      Math.max(...lats) - Math.min(...lats),
-      Math.max(...lngs) - Math.min(...lngs),
-    );
-    const radius = spread * 1.2 || 0.002;
-    let angle = 0;
-    let rafId: number;
-    const tick = () => {
-      angle += 0.006;
-      map.setView(
-        [centerLat + radius * Math.sin(angle), centerLng + radius * Math.cos(angle)],
-        map.getZoom(),
-        { animate: false },
-      );
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [active]);
-  return null;
-}
-
 function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: string }) {
   const [orbitActive, setOrbitActive] = useState(false);
-  const path = decode(encodedPath).map(([lat, lng]) => [lat, lng] as [number, number]);
-  if (!path.length) return null;
-  const lats = path.map(([lat]) => lat);
-  const lngs = path.map(([, lng]) => lng);
-  const center: [number, number] = [
-    (Math.min(...lats) + Math.max(...lats)) / 2,
-    (Math.min(...lngs) + Math.max(...lngs)) / 2,
-  ];
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const rafRef = useRef<number>(0);
+  const glowRafRef = useRef<number>(0);
+  const loadedRef = useRef(false);
+  const baseZoomRef = useRef<number>(15);
+
+  // coords as [lng, lat] for MapLibre GeoJSON
+  const coords = decode(encodedPath).map(([lat, lng]) => [lng, lat] as [number, number]);
+
+  useEffect(() => {
+    if (!containerRef.current || !coords.length) return;
+
+    import("maplibre-gl").then(({ Map, LngLatBounds }) => {
+      if (!containerRef.current) return;
+      const map = new Map({
+        container: containerRef.current,
+        style: "https://tiles.openfreemap.org/styles/dark",
+        interactive: false,
+        attributionControl: false,
+      });
+      mapRef.current = map;
+
+      map.on("load", () => {
+        loadedRef.current = true;
+
+        map.addSource("route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: coords },
+          },
+        });
+        map.addLayer({
+          id: "route-glow",
+          type: "line",
+          source: "route",
+          paint: { "line-color": getColor(severity), "line-width": 10, "line-opacity": 0.25, "line-blur": 6 },
+        });
+        map.addLayer({
+          id: "route-line",
+          type: "line",
+          source: "route",
+          paint: { "line-color": getColor(severity), "line-width": 4, "line-opacity": 0.95 },
+        });
+
+        const bounds = coords.reduce(
+          (b, c) => b.extend(c as [number, number]),
+          new LngLatBounds(coords[0], coords[0]),
+        );
+        map.fitBounds(bounds, { padding: 40, animate: false });
+        map.once("idle", () => { baseZoomRef.current = map.getZoom(); });
+
+        // breathing glow animation
+        const period = severity === "high" ? 1500 : 3000;
+        let start: number | null = null;
+        const breathe = (ts: number) => {
+          if (!start) start = ts;
+          const t = ((ts - start) % period) / period;
+          const opacity = 0.15 + 0.35 * Math.abs(Math.sin(t * Math.PI));
+          const width = 8 + 6 * Math.abs(Math.sin(t * Math.PI));
+          if (map.getLayer("route-glow")) {
+            map.setPaintProperty("route-glow", "line-opacity", opacity);
+            map.setPaintProperty("route-glow", "line-width", width);
+          }
+          glowRafRef.current = requestAnimationFrame(breathe);
+        };
+        glowRafRef.current = requestAnimationFrame(breathe);
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(glowRafRef.current);
+      mapRef.current?.remove();
+      mapRef.current = null;
+      loadedRef.current = false;
+    };
+  }, [encodedPath]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+
+    cancelAnimationFrame(rafRef.current);
+
+    if (!orbitActive) {
+      map.easeTo({ pitch: 0, bearing: 0, zoom: baseZoomRef.current, duration: 700 });
+      return;
+    }
+
+    baseZoomRef.current = map.getZoom();
+    map.easeTo({ pitch: 60, zoom: baseZoomRef.current + 1.5, duration: 700 });
+
+    const startOrbit = () => {
+      let bearing = map.getBearing();
+      const tick = () => {
+        bearing += 0.12;
+        map.setBearing(bearing);
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    const t = setTimeout(startOrbit, 750);
+    return () => clearTimeout(t);
+  }, [orbitActive]);
+
+  if (!coords.length) return null;
+
   return (
     <div className="relative">
-      <MapContainer
-        center={center}
-        zoom={16}
-        dragging={false}
-        zoomControl={false}
-        scrollWheelZoom={false}
-        touchZoom={false}
-        doubleClickZoom={false}
-        keyboard={false}
-        attributionControl={false}
-        style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)" }}
-      >
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-        <Polyline
-          positions={path}
-          pathOptions={{ color: getColor(severity), weight: 5, opacity: 0.9 }}
-        />
-        <MiniMapFitBounds path={path} />
-        <MiniMapOrbit path={path} active={orbitActive} />
-      </MapContainer>
+      <div
+        ref={containerRef}
+        style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)", overflow: "hidden" }}
+      />
       <button
         onClick={(e) => { e.stopPropagation(); setOrbitActive((v) => !v); }}
-        title={orbitActive ? "Stop orbit" : "Orbit view"}
-        className={`absolute bottom-2 right-2 z-[1000] flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
-          orbitActive
-            ? "bg-cyan-500/90 text-black shadow-[0_0_8px_rgba(0,255,255,0.6)]"
-            : "bg-black/60 text-cyan-400 border border-cyan-500/40 hover:border-cyan-400"
-        }`}
+        title={orbitActive ? "Stop orbit" : "3D orbit"}
+        className={`absolute bottom-2 right-2 z-[1000] flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${orbitActive
+          ? "bg-cyan-500/90 text-black shadow-[0_0_8px_rgba(0,255,255,0.6)]"
+          : "bg-black/60 text-cyan-400 border border-cyan-500/40 hover:border-cyan-400"
+          }`}
       >
         <Orbit size={12} className={orbitActive ? "animate-spin" : ""} style={orbitActive ? { animationDuration: "2s" } : {}} />
-        {orbitActive ? "Orbiting" : "Orbit"}
+        {orbitActive ? "Orbiting" : "3D"}
       </button>
     </div>
   );
@@ -1108,8 +1164,6 @@ function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: str
 
 function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
-  const [showShare, setShowShare] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (ac) return;
@@ -1132,8 +1186,8 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   const hasDownvoted = user && downvoters.includes(user.uid);
   const color = getColor(report.severity);
 
+  const shareUrl = `https://kuzhiyundo.com?id=${report.id}`;
   const shareText = `🚧 Pothole reported in ${report.address || "Unknown Location"}\nSeverity: ${(report.severity || "low").toUpperCase()} | Score: ${upvoters.length - downvoters.length > 0 ? "+" : ""}${upvoters.length - downvoters.length}\nReported on Kuzhiyundo`;
-  const shareUrl = "https://kuzhiyundo.com";
 
   const buildRouteImage = (): string | null => {
     if (!report.encodedPath) return null;
@@ -1183,29 +1237,13 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   };
 
   const handleShare = async () => {
-    const imgDataUrl = buildRouteImage();
     if (navigator.share) {
       try {
-        if (imgDataUrl && (navigator as any).canShare) {
-          const res = await fetch(imgDataUrl);
-          const blob = await res.blob();
-          const file = new File([blob], "pothole-route.png", { type: "image/png" });
-          if ((navigator as any).canShare({ files: [file] })) {
-            await navigator.share({ title: "Kuzhi Report", text: shareText, url: shareUrl, files: [file] } as any);
-            return;
-          }
-        }
-        await navigator.share({ title: "Kuzhi Report", text: shareText, url: shareUrl });
-      } catch {}
-    } else {
-      setShowShare((v) => !v);
+        await navigator.share({ title: "Kuzhiyundo — Pothole Report", text: shareText, url: shareUrl });
+        return;
+      } catch { }
     }
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => { });
   };
 
   return (
@@ -1242,53 +1280,6 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
             </button>
           </div>
         </div>
-
-        {/* Share panel */}
-        {showShare && (() => {
-          const imgDataUrl = buildRouteImage();
-          return (
-            <div className="mx-4 mb-2 border border-cyan-500/30 bg-black/60 rounded p-3 flex flex-col gap-2">
-              <div className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-1">Share Report</div>
-              {imgDataUrl && (
-                <div className="relative w-full overflow-hidden rounded border border-cyan-500/20">
-                  <img src={imgDataUrl} alt="Route map" className="w-full" />
-                  <a
-                    href={imgDataUrl}
-                    download="pothole-route.png"
-                    className="absolute bottom-2 right-2 bg-black/70 border border-cyan-500/40 text-cyan-400 text-[9px] uppercase tracking-widest px-2 py-1 hover:bg-cyan-900/40 transition-colors"
-                  >
-                    Save image
-                  </a>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
-                >
-                  WhatsApp
-                </a>
-                <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
-                >
-                  X / Twitter
-                </a>
-                <button
-                  onClick={handleCopy}
-                  className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
-                >
-                  {copied ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                  {copied ? "Copied" : "Copy"}
-                </button>
-              </div>
-            </div>
-          );
-        })()}
 
         <div className="px-4 py-3 flex flex-col gap-3">
           {/* Mini map */}
@@ -1447,170 +1438,170 @@ function ReportingOverlay({
   if (!reportingMode) {
     return (
       <>
-      <div
-        ref={overlayRef}
-        className="absolute z-[1000] left-4 right-4 md:right-auto md:w-80 flex flex-col gap-3 font-mono pointer-events-none" style={{ top: "max(1rem, env(safe-area-inset-top, 1rem))" }}
-        onMouseEnter={() => setIsDesktopHovered(true)}
-        onMouseLeave={() => setIsDesktopHovered(false)}
-      >
-        <div className="bg-black/80 border border-cyan-500/50 p-4 md:p-5 shadow-[0_0_20px_rgba(0,255,255,0.15)] backdrop-blur-md relative pointer-events-auto transition-all duration-300">
-          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-50"></div>
+        <div
+          ref={overlayRef}
+          className="absolute z-[1000] left-4 right-4 md:right-auto md:w-80 flex flex-col gap-3 font-mono pointer-events-none" style={{ top: "max(1rem, env(safe-area-inset-top, 1rem))" }}
+          onMouseEnter={() => setIsDesktopHovered(true)}
+          onMouseLeave={() => setIsDesktopHovered(false)}
+        >
+          <div className="bg-black/80 border border-cyan-500/50 p-4 md:p-5 shadow-[0_0_20px_rgba(0,255,255,0.15)] backdrop-blur-md relative pointer-events-auto transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-50"></div>
 
-          <div className="flex justify-between items-center">
-            <div className="flex flex-col">
-              <h1 className="text-lg md:text-xl font-bold tracking-[0.2em] text-cyan-400 flex items-center gap-2 md:gap-3 uppercase">
-                <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)] flex items-center justify-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-5 h-5 md:w-6 md:h-6"
-                  >
-                    <path
-                      d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
-                      fill="currentColor"
+            <div className="flex justify-between items-center">
+              <div className="flex flex-col">
+                <h1 className="text-lg md:text-xl font-bold tracking-[0.2em] text-cyan-400 flex items-center gap-2 md:gap-3 uppercase">
+                  <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)] flex items-center justify-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
-                    />
-                    <path
-                      d="M12 7.5 l1.5 0.5 l0.5 1.5 l-0.5 1 l1.5 0.5 l-1.5 1.5 l-1.5 -0.5 l-1 1.5 l-1 -1.5 l-1.5 -0.5 l0.5 -1 l-1 -1.5 l1.5 -0.5 l1 -1 Z"
-                      fill="black"
-                      stroke="black"
-                      strokeWidth="1"
-                      strokeLinejoin="miter"
-                    />
-                    <circle cx="16" cy="7" r="1.5" fill="black" stroke="none" />
-                    <circle cx="8" cy="12" r="1" fill="black" stroke="none" />
-                    <circle
-                      cx="15"
-                      cy="13"
-                      r="0.8"
-                      fill="black"
-                      stroke="none"
-                    />
-                  </svg>
-                </span>
-                <span className="font-handwriting text-2xl md:text-3xl tracking-normal normal-case font-normal">
-                  Kuzhiyundo?
-                </span>
-              </h1>
-              <div className="text-[9px] md:text-[10px] text-cyan-500/80 mt-1 uppercase tracking-widest font-semibold flex items-center gap-1 overflow-hidden h-4 md:h-5">
-                <div className="flex items-center justify-center mr-0.5">
-                  <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff003c] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 md:h-2 md:w-2 bg-[#ff003c]"></span>
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-5 h-5 md:w-6 md:h-6"
+                    >
+                      <path
+                        d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                        fill="currentColor"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      />
+                      <path
+                        d="M12 7.5 l1.5 0.5 l0.5 1.5 l-0.5 1 l1.5 0.5 l-1.5 1.5 l-1.5 -0.5 l-1 1.5 l-1 -1.5 l-1.5 -0.5 l0.5 -1 l-1 -1.5 l1.5 -0.5 l1 -1 Z"
+                        fill="black"
+                        stroke="black"
+                        strokeWidth="1"
+                        strokeLinejoin="miter"
+                      />
+                      <circle cx="16" cy="7" r="1.5" fill="black" stroke="none" />
+                      <circle cx="8" cy="12" r="1" fill="black" stroke="none" />
+                      <circle
+                        cx="15"
+                        cy="13"
+                        r="0.8"
+                        fill="black"
+                        stroke="none"
+                      />
+                    </svg>
+                  </span>
+                  <span className="font-handwriting text-2xl md:text-3xl tracking-normal normal-case font-normal">
+                    Kuzhiyundo?
+                  </span>
+                </h1>
+                <div className="text-[9px] md:text-[10px] text-cyan-500/80 mt-1 uppercase tracking-widest font-semibold flex items-center gap-1 overflow-hidden h-4 md:h-5">
+                  <div className="flex items-center justify-center mr-0.5">
+                    <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff003c] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 md:h-2 md:w-2 bg-[#ff003c]"></span>
+                    </span>
+                  </div>
+                  <AnimatePresence mode="popLayout">
+                    <motion.span
+                      key={reportsCount}
+                      initial={{
+                        y: -15,
+                        opacity: 0,
+                        filter: "blur(4px)",
+                        color: "#00f0ff",
+                      }}
+                      animate={{
+                        y: 0,
+                        opacity: 1,
+                        filter: "blur(0px)",
+                        color: "currentColor",
+                      }}
+                      exit={{
+                        y: 15,
+                        opacity: 0,
+                        filter: "blur(4px)",
+                        color: "#00f0ff",
+                      }}
+                      transition={{ duration: 0.5, type: "spring", bounce: 0.4 }}
+                      className="inline-block"
+                    >
+                      {reportsCount}
+                    </motion.span>
+                  </AnimatePresence>
+                  <span>
+                    {reportsCount === 1 ? "Pothole" : "Potholes"} Reported
                   </span>
                 </div>
-                <AnimatePresence mode="popLayout">
-                  <motion.span
-                    key={reportsCount}
-                    initial={{
-                      y: -15,
-                      opacity: 0,
-                      filter: "blur(4px)",
-                      color: "#00f0ff",
-                    }}
-                    animate={{
-                      y: 0,
-                      opacity: 1,
-                      filter: "blur(0px)",
-                      color: "currentColor",
-                    }}
-                    exit={{
-                      y: 15,
-                      opacity: 0,
-                      filter: "blur(4px)",
-                      color: "#00f0ff",
-                    }}
-                    transition={{ duration: 0.5, type: "spring", bounce: 0.4 }}
-                    className="inline-block"
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
+                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
+                >
+                  <Plus className="w-3 h-3" /> Report
+                </button>
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="md:hidden text-cyan-400 p-1 border border-cyan-500/30 rounded-sm bg-cyan-900/30 hover:bg-cyan-800/50 transition-colors"
+                >
+                  <div
+                    className="transition-transform duration-300"
+                    style={{ transform: `rotate(${isExpanded ? 180 : 0}deg)` }}
                   >
-                    {reportsCount}
-                  </motion.span>
-                </AnimatePresence>
-                <span>
-                  {reportsCount === 1 ? "Pothole" : "Potholes"} Reported
-                </span>
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
-                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
-              >
-                <Plus className="w-3 h-3" /> Report
-              </button>
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="md:hidden text-cyan-400 p-1 border border-cyan-500/30 rounded-sm bg-cyan-900/30 hover:bg-cyan-800/50 transition-colors"
-              >
-                <div
-                  className="transition-transform duration-300"
-                  style={{ transform: `rotate(${isExpanded ? 180 : 0}deg)` }}
-                >
-                  <ChevronDown className="w-4 h-4" />
+
+            <div
+              className={`grid transition-[grid-template-rows] duration-300 ${isDesktopHovered ? "md:grid-rows-[1fr]" : "md:grid-rows-[0fr]"} ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            >
+              <div className="overflow-hidden flex flex-col">
+                <div className="pt-3">
+                  <p className="text-[9px] md:text-[10px] text-cyan-500/70 uppercase tracking-widest border-t border-cyan-500/20 pt-2">
+                    Community Pothole Tracker
+                  </p>
+                  <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-cyan-500/20 flex items-center gap-1.5 text-[8px] md:text-[9px] text-cyan-500/60 uppercase tracking-widest">
+                    <span>Built with</span>
+                    <Heart className="w-2.5 h-2.5 md:w-3 md:h-3 text-red-500 fill-red-500 animate-pulse" />
+                    <span>by</span>
+                    <a
+                      href="https://sajithlal.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 hover:text-white transition-colors underline underline-offset-2 decoration-cyan-500/50 pointer-events-auto"
+                    >
+                      Sajithlal
+                    </a>
+                  </div>
                 </div>
-              </button>
+              </div>
             </div>
           </div>
 
           <div
-            className={`grid transition-[grid-template-rows] duration-300 ${isDesktopHovered ? "md:grid-rows-[1fr]" : "md:grid-rows-[0fr]"} ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            className={`grid transition-[grid-template-rows] duration-300 pointer-events-auto ${isDesktopHovered ? "md:grid-rows-[1fr]" : "md:grid-rows-[0fr]"} ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
           >
             <div className="overflow-hidden flex flex-col">
-              <div className="pt-3">
-                <p className="text-[9px] md:text-[10px] text-cyan-500/70 uppercase tracking-widest border-t border-cyan-500/20 pt-2">
-                  Community Pothole Tracker
-                </p>
-                <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-cyan-500/20 flex items-center gap-1.5 text-[8px] md:text-[9px] text-cyan-500/60 uppercase tracking-widest">
-                  <span>Built with</span>
-                  <Heart className="w-2.5 h-2.5 md:w-3 md:h-3 text-red-500 fill-red-500 animate-pulse" />
-                  <span>by</span>
-                  <a
-                    href="https://sajithlal.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyan-400 hover:text-white transition-colors underline underline-offset-2 decoration-cyan-500/50 pointer-events-auto"
+              <div className="flex flex-col gap-2 md:gap-3">
+                <button
+                  onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
+                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-2 md:py-3 px-4 md:px-6 shadow-[0_0_15px_rgba(0,255,255,0.5)] hover:shadow-[0_0_25px_rgba(0,255,255,0.8)] transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                >
+                  <Plus className="w-4 h-4" /> REPORT KUZHI
+                </button>
+                {user && (
+                  <button
+                    onClick={logout}
+                    className="bg-black/50 hover:bg-red-500/20 text-cyan-500 hover:text-red-400 py-1.5 md:py-2 px-4 transition-all border border-cyan-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
                   >
-                    Sajithlal
-                  </a>
-                </div>
+                    <LogOut className="w-3 h-3" /> SIGN OUT
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
-
-        <div
-          className={`grid transition-[grid-template-rows] duration-300 pointer-events-auto ${isDesktopHovered ? "md:grid-rows-[1fr]" : "md:grid-rows-[0fr]"} ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-        >
-          <div className="overflow-hidden flex flex-col">
-            <div className="flex flex-col gap-2 md:gap-3">
-              <button
-                onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
-                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-2 md:py-3 px-4 md:px-6 shadow-[0_0_15px_rgba(0,255,255,0.5)] hover:shadow-[0_0_25px_rgba(0,255,255,0.8)] transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
-              >
-                <Plus className="w-4 h-4" /> REPORT KUZHI
-              </button>
-              {user && (
-                <button
-                  onClick={logout}
-                  className="bg-black/50 hover:bg-red-500/20 text-cyan-500 hover:text-red-400 py-1.5 md:py-2 px-4 transition-all border border-cyan-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
-                >
-                  <LogOut className="w-3 h-3" /> SIGN OUT
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      {showSignInReportPrompt && (
-        <SignInToReportModal onClose={() => setShowSignInReportPrompt(false)} />
-      )}
-    </>
+        {showSignInReportPrompt && (
+          <SignInToReportModal onClose={() => setShowSignInReportPrompt(false)} />
+        )}
+      </>
     );
   }
 
@@ -1784,8 +1775,8 @@ function SubmitRouteForm({
         payload.acName = constituency.acName;
         payload.acNo = constituency.acNo;
         payload.pcName = constituency.pcName;
-        if (constituency.lsgd)      payload.lsgd      = constituency.lsgd;
-        if (constituency.lsgdType)  payload.lsgdType  = constituency.lsgdType;
+        if (constituency.lsgd) payload.lsgd = constituency.lsgd;
+        if (constituency.lsgdType) payload.lsgdType = constituency.lsgdType;
         if (constituency.lsgdLabel) payload.lsgdLabel = constituency.lsgdLabel;
       }
 
