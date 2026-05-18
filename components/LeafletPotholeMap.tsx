@@ -964,6 +964,37 @@ function SignInToVoteModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function SignInToReportModal({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[2600] bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-black/95 border border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="text-[9px] uppercase tracking-widest text-cyan-500/60">Sign in required</div>
+          <button onClick={onClose} className="text-cyan-500/40 hover:text-cyan-400 -mt-0.5">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1">
+          <div className="text-sm font-bold text-cyan-400">Report a pothole</div>
+          <p className="text-[11px] text-cyan-400/70 leading-relaxed">
+            Sign in to report potholes in your area. Your identity is only used to track your reports — it is never shared or displayed publicly.
+          </p>
+        </div>
+        <button
+          onClick={() => { loginWithGoogle(); onClose(); }}
+          className="w-full py-2.5 text-[11px] font-bold uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 transition-colors rounded"
+        >
+          Sign in with Google
+        </button>
+      </div>
+    </>
+  );
+}
+
 function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
 
@@ -1146,6 +1177,7 @@ function ReportingOverlay({
   const user = useAuthStore((state) => state.user);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDesktopHovered, setIsDesktopHovered] = useState(false);
+  const [showSignInReportPrompt, setShowSignInReportPrompt] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1169,9 +1201,10 @@ function ReportingOverlay({
 
   if (!reportingMode) {
     return (
+      <>
       <div
         ref={overlayRef}
-        className="absolute z-[1000] top-4 left-4 right-4 md:right-auto md:w-80 flex flex-col gap-3 font-mono pointer-events-none"
+        className="absolute z-[1000] left-4 right-4 md:right-auto md:w-80 flex flex-col gap-3 font-mono pointer-events-none" style={{ top: "max(1rem, env(safe-area-inset-top, 1rem))" }}
         onMouseEnter={() => setIsDesktopHovered(true)}
         onMouseLeave={() => setIsDesktopHovered(false)}
       >
@@ -1260,21 +1293,12 @@ function ReportingOverlay({
               </div>
             </div>
             <div className="md:hidden flex items-center gap-2">
-              {user ? (
-                <button
-                  onClick={() => setReportingMode(true)}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
-                >
-                  <Plus className="w-3 h-3" /> Report
-                </button>
-              ) : (
-                <button
-                  onClick={loginWithGoogle}
-                  className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest transition-all"
-                >
-                  Sign In
-                </button>
-              )}
+              <button
+                onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
+                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
+              >
+                <Plus className="w-3 h-3" /> Report
+              </button>
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="text-cyan-400 p-1 border border-cyan-500/30 rounded-sm bg-cyan-900/30 hover:bg-cyan-800/50 transition-colors"
@@ -1319,39 +1343,34 @@ function ReportingOverlay({
           className={`grid transition-[grid-template-rows] duration-300 pointer-events-auto ${isDesktopHovered ? "md:grid-rows-[1fr]" : "md:grid-rows-[0fr]"} ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
         >
           <div className="overflow-hidden flex flex-col">
-            {user ? (
-              <div className="flex flex-col gap-2 md:gap-3">
-                <button
-                  onClick={() => setReportingMode(true)}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-2 md:py-3 px-4 md:px-6 shadow-[0_0_15px_rgba(0,255,255,0.5)] hover:shadow-[0_0_25px_rgba(0,255,255,0.8)] transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
-                >
-                  <Plus className="w-4 h-4" /> REPORT KUZHI
-                </button>
+            <div className="flex flex-col gap-2 md:gap-3">
+              <button
+                onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
+                className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-2 md:py-3 px-4 md:px-6 shadow-[0_0_15px_rgba(0,255,255,0.5)] hover:shadow-[0_0_25px_rgba(0,255,255,0.8)] transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+              >
+                <Plus className="w-4 h-4" /> REPORT KUZHI
+              </button>
+              {user && (
                 <button
                   onClick={logout}
                   className="bg-black/50 hover:bg-red-500/20 text-cyan-500 hover:text-red-400 py-1.5 md:py-2 px-4 transition-all border border-cyan-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
                 >
                   <LogOut className="w-3 h-3" /> SIGN OUT
                 </button>
-              </div>
-            ) : (
-              <div className="block">
-                <button
-                  onClick={loginWithGoogle}
-                  className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 py-2 md:py-3 px-4 md:px-6 shadow-[inset_0_0_15px_rgba(0,255,255,0.2)] transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs font-bold backdrop-blur-sm"
-                >
-                  SIGN IN WITH GOOGLE
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
+      {showSignInReportPrompt && (
+        <SignInToReportModal onClose={() => setShowSignInReportPrompt(false)} />
+      )}
+    </>
     );
   }
 
   return (
-    <div className="absolute z-[9999] top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-max md:max-w-[90vw] flex flex-col items-center flex-nowrap font-mono">
+    <div className="absolute z-[9999] left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-max md:max-w-[90vw] flex flex-col items-center flex-nowrap font-mono" style={{ top: "max(1rem, env(safe-area-inset-top, 1rem))" }}>
       <div className="bg-black/90 border border-cyan-500/60 w-full px-4 md:px-6 py-5 shadow-[0_0_25px_rgba(0,255,255,0.2)] backdrop-blur-md flex flex-col items-center text-center relative pointer-events-auto">
         <div className="absolute bottom-0 left-0 w-full h-[2px] bg-cyan-500 shadow-[0_0_10px_rgba(0,255,255,1)]"></div>
 
