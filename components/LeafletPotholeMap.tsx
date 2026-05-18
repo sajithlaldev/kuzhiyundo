@@ -1085,9 +1085,68 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   const shareText = `🚧 Pothole reported in ${report.address || "Unknown Location"}\nSeverity: ${(report.severity || "low").toUpperCase()} | Score: ${upvoters.length - downvoters.length > 0 ? "+" : ""}${upvoters.length - downvoters.length}\nReported on Kuzhiyundo`;
   const shareUrl = "https://kuzhiyundo.com";
 
+  const buildRouteImage = (): string | null => {
+    if (!report.encodedPath) return null;
+    try {
+      const path = decode(report.encodedPath).map(([lat, lng]) => [lat, lng] as [number, number]);
+      if (!path.length) return null;
+      const canvas = document.createElement("canvas");
+      canvas.width = 800; canvas.height = 400;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, 0, 800, 400);
+      const lats = path.map(([lat]) => lat);
+      const lngs = path.map(([, lng]) => lng);
+      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+      const pad = 60, w = 800 - pad * 2, h = 400 - pad * 2;
+      const toX = (lng: number) => pad + ((lng - minLng) / (maxLng - minLng || 0.0001)) * w;
+      const toY = (lat: number) => pad + (1 - (lat - minLat) / (maxLat - minLat || 0.0001)) * h;
+      // Grid lines
+      ctx.strokeStyle = "rgba(0,255,255,0.05)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const x = pad + (w / 4) * i; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 400); ctx.stroke();
+        const y = pad + (h / 4) * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(800, y); ctx.stroke();
+      }
+      // Glow pass
+      ctx.shadowColor = color; ctx.shadowBlur = 20;
+      ctx.strokeStyle = color; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.beginPath();
+      path.forEach(([lat, lng], i) => i === 0 ? ctx.moveTo(toX(lng), toY(lat)) : ctx.lineTo(toX(lng), toY(lat)));
+      ctx.stroke();
+      // Solid pass
+      ctx.shadowBlur = 0; ctx.lineWidth = 3;
+      ctx.beginPath();
+      path.forEach(([lat, lng], i) => i === 0 ? ctx.moveTo(toX(lng), toY(lat)) : ctx.lineTo(toX(lng), toY(lat)));
+      ctx.stroke();
+      // Endpoints
+      ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.fillStyle = color;
+      [[path[0][0], path[0][1]], [path[path.length - 1][0], path[path.length - 1][1]]].forEach(([lat, lng]) => {
+        ctx.beginPath(); ctx.arc(toX(lng), toY(lat), 7, 0, Math.PI * 2); ctx.fill();
+      });
+      // Watermark
+      ctx.shadowBlur = 0; ctx.fillStyle = "rgba(0,255,255,0.3)";
+      ctx.font = "bold 13px monospace"; ctx.fillText("kuzhiyundo.com", pad, 400 - 16);
+      return canvas.toDataURL("image/png");
+    } catch { return null; }
+  };
+
   const handleShare = async () => {
+    const imgDataUrl = buildRouteImage();
     if (navigator.share) {
-      try { await navigator.share({ title: "Kuzhi Report", text: shareText, url: shareUrl }); } catch {}
+      try {
+        if (imgDataUrl && (navigator as any).canShare) {
+          const res = await fetch(imgDataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], "pothole-route.png", { type: "image/png" });
+          if ((navigator as any).canShare({ files: [file] })) {
+            await navigator.share({ title: "Kuzhi Report", text: shareText, url: shareUrl, files: [file] } as any);
+            return;
+          }
+        }
+        await navigator.share({ title: "Kuzhi Report", text: shareText, url: shareUrl });
+      } catch {}
     } else {
       setShowShare((v) => !v);
     }
@@ -1135,36 +1194,51 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         </div>
 
         {/* Share panel */}
-        {showShare && (
-          <div className="mx-4 mb-2 border border-cyan-500/30 bg-black/60 rounded p-3 flex flex-col gap-2">
-            <div className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-1">Share Report</div>
-            <div className="flex gap-2">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
-              >
-                WhatsApp
-              </a>
-              <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
-              >
-                X / Twitter
-              </a>
-              <button
-                onClick={handleCopy}
-                className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
-              >
-                {copied ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                {copied ? "Copied" : "Copy"}
-              </button>
+        {showShare && (() => {
+          const imgDataUrl = buildRouteImage();
+          return (
+            <div className="mx-4 mb-2 border border-cyan-500/30 bg-black/60 rounded p-3 flex flex-col gap-2">
+              <div className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-1">Share Report</div>
+              {imgDataUrl && (
+                <div className="relative w-full overflow-hidden rounded border border-cyan-500/20">
+                  <img src={imgDataUrl} alt="Route map" className="w-full" />
+                  <a
+                    href={imgDataUrl}
+                    download="pothole-route.png"
+                    className="absolute bottom-2 right-2 bg-black/70 border border-cyan-500/40 text-cyan-400 text-[9px] uppercase tracking-widest px-2 py-1 hover:bg-cyan-900/40 transition-colors"
+                  >
+                    Save image
+                  </a>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
+                >
+                  WhatsApp
+                </a>
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
+                >
+                  X / Twitter
+                </a>
+                <button
+                  onClick={handleCopy}
+                  className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30 text-cyan-400 hover:bg-cyan-900/30 transition-colors"
+                >
+                  {copied ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         <div className="px-4 py-3 flex flex-col gap-3">
           {/* Mini map */}
