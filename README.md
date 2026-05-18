@@ -10,6 +10,7 @@
     <a href="#tech-stack">Tech Stack</a> •
     <a href="#getting-started">Getting Started</a> •
     <a href="#contributing">Contributing</a> •
+    <a href="https://github.com/sajithlaldev/kuzhiyundo/issues/new" target="_blank">🐛 Report a Bug</a> •
     <a href="#license">License</a>
   </p>
 </div>
@@ -26,9 +27,11 @@
 - ✍️ **Route Drawing Engine:** Automatically maps out the most accurate pothole segment using OSRM routing. No more guessing exactly where the bad road starts and ends.
 - 🚦 **Severity Indicators:** Color-coded paths and neon markers denote the severity of the road defect (Low, Medium, High).
 - 👍 **Voting System:** Community members can upvote or downvote reported potholes to ensure report accuracy and prioritize repair efforts.
-- 📸 **Image Uploading:** Users can attach visual evidence of potholes (automatically compressed, with limits applied).
+- 📸 **Image Uploading:** Users can attach visual evidence of potholes (compressed to 800×800 JPEG client-side before saving).
 - 🔐 **Authentication:** Secure Google Sign-In using Firebase Authentication.
 - ⚡ **Realtime Updates:** Potholes and votes sync instantly to all connected users without a page reload using Firestore real-time listeners.
+- 🛡️ **App Check:** reCAPTCHA v3-backed Firebase App Check protects all API routes and Firestore writes from abuse.
+- 🔍 **Location Search:** OLA Maps-powered address autocomplete to quickly navigate the map.
 
 ## 🛠️ Tech Stack
 
@@ -38,16 +41,19 @@
 - [Tailwind CSS v4](https://tailwindcss.com/)
 - [Leaflet](https://leafletjs.com/) & [react-leaflet](https://react-leaflet.js.org/) for interactive maps
 - [react-leaflet-cluster](https://github.com/akursat/react-leaflet-cluster) for marker clustering
+- [Framer Motion](https://www.framer.com/motion/) for animations
 - [Lucide React](https://lucide.dev/) for iconography
 
 **Backend & Data**
-- [Firebase Firestore](https://firebase.google.com/docs/firestore) (Database)
+- [Firebase Firestore](https://firebase.google.com/docs/firestore) (Database — images stored as base64)
 - [Firebase Auth](https://firebase.google.com/docs/auth) (Google Provider Auth)
-- [Firebase App Check](https://firebase.google.com/docs/app-check) (reCAPTCHA v3 — protects Firestore & Auth from abuse)
-- [Firebase Storage](https://firebase.google.com/docs/storage) (Images/Blobs - optional per config)
+- [Firebase App Check](https://firebase.google.com/docs/app-check) (reCAPTCHA v3 — protects API routes and Firestore from abuse)
 
 **External APIs**
 - [OSRM Router API](http://project-osrm.org/) for routing polylines
+- [Nominatim](https://nominatim.org/) for reverse geocoding
+- [OLA Maps](https://maps.olacabs.com/) for address autocomplete (server-side only)
+- [Open Data Kerala](https://kerala.gov.in/) GeoJSON for constituency/LSGD point-in-polygon lookup
 - [Google Maps Polyline Codec](https://github.com/googlemaps/js-polyline-codec) for encoding/decoding OSRM routes
 
 ## 🏁 Getting Started
@@ -58,6 +64,7 @@ Ensure you have the following installed on your local machine:
 - Node.js (v18 or higher)
 - npm or yarn or pnpm
 - A Firebase Project (with Firestore and Authentication enabled)
+- Firebase App Check configured with reCAPTCHA v3
 
 ### Installation
 
@@ -83,6 +90,7 @@ Ensure you have the following installed on your local machine:
    NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
    NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your_recaptcha_v3_site_key
+   OLA_MAPS_API_KEY=your_ola_maps_api_key   # server-side only, used in /api/search
    ```
 
 4. **Run the development server:**
@@ -105,13 +113,13 @@ This is an open-source project, and contributions are highly appreciated! Whethe
 5. Open a Pull Request.
 
 ### Development Guidelines
-- Always format your code before committing (`npm run lint`, formatting configuration).
+- Always format your code before committing (`npm run lint`).
 - Keep components modular and reusable where possible.
 - Update documentation when adding new configuration or system capabilities.
 
 ## 🐛 Bug Reports & Feature Requests
 
-Please use the [Issue Tracker](https://github.com/sajithlaldev/kuzhiyundo/issues) to report technical bugs or suggest feature extensions.
+Found a bug or have a feature idea? Please open an issue on the [Issue Tracker](https://github.com/sajithlaldev/kuzhiyundo/issues/new).
 
 ## 📄 License
 

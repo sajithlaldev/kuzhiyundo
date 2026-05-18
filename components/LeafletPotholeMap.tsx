@@ -58,6 +58,8 @@ import {
   Link,
   Copy,
   Orbit,
+  Bug,
+  ExternalLink,
 } from "lucide-react";
 
 // Fix default marker icon issues in Leaflet
@@ -1580,12 +1582,14 @@ function ReportingOverlay({
           >
             <div className="overflow-hidden flex flex-col">
               <div className="flex flex-col gap-2 md:gap-3">
-                <button
-                  onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-2 md:py-3 px-4 md:px-6 shadow-[0_0_15px_rgba(0,255,255,0.5)] hover:shadow-[0_0_25px_rgba(0,255,255,0.8)] transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                <a
+                  href="https://github.com/sajithlaldev/kuzhiyundo/issues/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-black/50 hover:bg-yellow-500/10 text-cyan-500 hover:text-yellow-400 py-1.5 md:py-2 px-4 transition-all border border-cyan-500/30 hover:border-yellow-500/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
                 >
-                  <Plus className="w-4 h-4" /> REPORT KUZHI
-                </button>
+                  <Bug className="w-3 h-3" /> Report a Bug <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                </a>
                 {user && (
                   <button
                     onClick={logout}
