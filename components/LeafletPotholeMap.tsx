@@ -56,6 +56,7 @@ import {
   Share2,
   Link,
   Copy,
+  Orbit,
 } from "lucide-react";
 
 // Fix default marker icon issues in Leaflet
@@ -147,8 +148,8 @@ export default function LeafletPotholeMap() {
   return (
     <div className="relative w-full h-screen bg-neutral-900 overflow-hidden">
       <MapContainer
-        center={[10.8505, 76.2711]} // Default center to Kerala for "Kuzhiyundo"
-        zoom={13}
+        center={[10.8505, 76.2711]}
+        zoom={7}
         style={{ width: "100%", height: "100%", background: "#0f172a" }}
         attributionControl={false}
         zoomControl={false}
@@ -1024,7 +1025,41 @@ function MiniMapFitBounds({ path }: { path: [number, number][] }) {
   return null;
 }
 
+function MiniMapOrbit({ path, active }: { path: [number, number][]; active: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!active) {
+      if (path.length) map.fitBounds(L.latLngBounds(path), { padding: [20, 20], animate: true });
+      return;
+    }
+    const lats = path.map(([lat]) => lat);
+    const lngs = path.map(([, lng]) => lng);
+    const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+    const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+    const spread = Math.max(
+      Math.max(...lats) - Math.min(...lats),
+      Math.max(...lngs) - Math.min(...lngs),
+    );
+    const radius = spread * 1.2 || 0.002;
+    let angle = 0;
+    let rafId: number;
+    const tick = () => {
+      angle += 0.006;
+      map.setView(
+        [centerLat + radius * Math.sin(angle), centerLng + radius * Math.cos(angle)],
+        map.getZoom(),
+        { animate: false },
+      );
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [active]);
+  return null;
+}
+
 function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: string }) {
+  const [orbitActive, setOrbitActive] = useState(false);
   const path = decode(encodedPath).map(([lat, lng]) => [lat, lng] as [number, number]);
   if (!path.length) return null;
   const lats = path.map(([lat]) => lat);
@@ -1034,25 +1069,40 @@ function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: str
     (Math.min(...lngs) + Math.max(...lngs)) / 2,
   ];
   return (
-    <MapContainer
-      center={center}
-      zoom={16}
-      dragging={false}
-      zoomControl={false}
-      scrollWheelZoom={false}
-      touchZoom={false}
-      doubleClickZoom={false}
-      keyboard={false}
-      attributionControl={false}
-      style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)" }}
-    >
-      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-      <Polyline
-        positions={path}
-        pathOptions={{ color: getColor(severity), weight: 5, opacity: 0.9 }}
-      />
-      <MiniMapFitBounds path={path} />
-    </MapContainer>
+    <div className="relative">
+      <MapContainer
+        center={center}
+        zoom={16}
+        dragging={false}
+        zoomControl={false}
+        scrollWheelZoom={false}
+        touchZoom={false}
+        doubleClickZoom={false}
+        keyboard={false}
+        attributionControl={false}
+        style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)" }}
+      >
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        <Polyline
+          positions={path}
+          pathOptions={{ color: getColor(severity), weight: 5, opacity: 0.9 }}
+        />
+        <MiniMapFitBounds path={path} />
+        <MiniMapOrbit path={path} active={orbitActive} />
+      </MapContainer>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOrbitActive((v) => !v); }}
+        title={orbitActive ? "Stop orbit" : "Orbit view"}
+        className={`absolute bottom-2 right-2 z-[1000] flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+          orbitActive
+            ? "bg-cyan-500/90 text-black shadow-[0_0_8px_rgba(0,255,255,0.6)]"
+            : "bg-black/60 text-cyan-400 border border-cyan-500/40 hover:border-cyan-400"
+        }`}
+      >
+        <Orbit size={12} className={orbitActive ? "animate-spin" : ""} style={orbitActive ? { animationDuration: "2s" } : {}} />
+        {orbitActive ? "Orbiting" : "Orbit"}
+      </button>
+    </div>
   );
 }
 
