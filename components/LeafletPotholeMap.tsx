@@ -18,6 +18,7 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { motion, AnimatePresence } from "motion/react";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
 import { initClarity } from "../lib/clarity";
+import { getConstituency } from "../lib/constituency";
 import { useAuthStore } from "../lib/store";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -343,6 +344,7 @@ function RenderReports({ reports }: { reports: any[] }) {
   const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  const [constituencyMap, setConstituencyMap] = useState<Record<string, any>>({});
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
 
@@ -355,6 +357,19 @@ function RenderReports({ reports }: { reports: any[] }) {
       setDeletingId(null);
     },
   });
+
+  const fetchConstituency = async (report: any) => {
+    if (report.acName || constituencyMap[report.id] !== undefined) return;
+    if (!report.encodedPath) return;
+    try {
+      const { decode } = await import("@googlemaps/polyline-codec");
+      const path = decode(report.encodedPath);
+      if (!path.length) return;
+      const [lat, lng] = path[0];
+      const info = await getConstituency(lat, lng);
+      setConstituencyMap((prev) => ({ ...prev, [report.id]: info }));
+    } catch {}
+  };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -538,6 +553,21 @@ function RenderReports({ reports }: { reports: any[] }) {
                 {report.district ? `${report.district} - ` : ""}
                 {report.address || "Unknown Location"}
               </div>
+
+              {(() => {
+                const ac = report.acName ? report : constituencyMap[report.id];
+                if (ac === undefined) return (
+                  <div className="text-[9px] text-cyan-500/40 italic">loading constituency…</div>
+                );
+                if (!ac) return null;
+                return (
+                  <div className="text-[9px] m-0 text-orange-400/90 uppercase leading-tight border-l-2 border-orange-400/50 pl-1">
+                    <span className="font-bold mr-1">Accountable:</span>
+                    {ac.acName} AC
+                    {ac.pcName ? ` · ${ac.pcName} PC` : ""}
+                  </div>
+                );
+              })()}
 
               <div className="text-[9px] m-0 text-cyan-500/70 uppercase leading-tight flex overflow-hidden">
                 <span className="text-cyan-500 font-bold inline mr-1 shrink-0">
@@ -819,6 +849,7 @@ function RenderReports({ reports }: { reports: any[] }) {
                     if (e.target && e.target._map) {
                       e.target._map.flyTo(path[0], 16, { duration: 1 });
                     }
+                    fetchConstituency(report);
                   },
                 }}
               >
@@ -1240,6 +1271,8 @@ function SubmitRouteForm({
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
+      const constituency = await getConstituency(origin.lat, origin.lng);
+
       const payload: any = {
         userId: user.uid,
         userName: user.displayName || user.email || "Anonymous",
@@ -1253,6 +1286,11 @@ function SubmitRouteForm({
       if (district) payload.district = district;
       if (notes.trim()) payload.notes = notes.trim();
       if (imageUrl) payload.imageUrl = imageUrl;
+      if (constituency) {
+        payload.acName   = constituency.acName;
+        payload.acNo     = constituency.acNo;
+        payload.pcName   = constituency.pcName;
+      }
 
       await addDoc(collection(db, "potholes"), payload);
       onCancel(); // Reset and close
