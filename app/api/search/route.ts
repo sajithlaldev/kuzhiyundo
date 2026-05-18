@@ -6,8 +6,7 @@ export const runtime = "edge";
 export async function GET(req: NextRequest) {
   const appCheckToken = req.headers.get("X-Firebase-AppCheck");
   if (!appCheckToken || !(await verifyAppCheckToken(appCheckToken))) {
-    // Log suspicious access but don't block — enforcement can be tightened later
-    console.warn("search: missing or invalid App Check token");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const q = req.nextUrl.searchParams.get("q");
