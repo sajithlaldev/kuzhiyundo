@@ -38,10 +38,13 @@ export async function verifyAppCheckToken(token: string): Promise<boolean> {
     const header = JSON.parse(b64url(headerB64));
     const payload = JSON.parse(b64url(payloadB64));
 
-    if (payload.exp < Date.now() / 1000) return false;
+    const now = Date.now() / 1000;
+    if (payload.exp < now) return false;
+    if (payload.nbf !== undefined && payload.nbf > now) return false;
 
     const projectNumber = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
     if (!payload.aud?.includes(`projects/${projectNumber}`)) return false;
+    if (payload.iss !== `https://firebaseappcheck.googleapis.com/${projectNumber}`) return false;
 
     const keys = await getPublicKeys();
     const key = keys[header.kid];
