@@ -7,6 +7,7 @@ import {
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { getAnalytics, isSupported } from "firebase/analytics";
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -34,6 +35,8 @@ if (
 // Auth and Firestore must be initialized after App Check
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+isSupported().then((yes) => { if (yes) getAnalytics(app); });
 
 export const loginWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
