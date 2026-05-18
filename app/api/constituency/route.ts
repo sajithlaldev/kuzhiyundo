@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
 
-export const runtime = "nodejs";
+export const runtime = 'edge';
 
 const GEOJSON_URL =
   "https://raw.githubusercontent.com/opendatakerala/kerala-assembly-map/main/KLA_2026_Review/KLA_AC_2026_V2.geojson";
