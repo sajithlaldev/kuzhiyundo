@@ -1410,6 +1410,7 @@ function SubmitRouteForm({
   const user = useAuthStore((state) => state.user);
   const [address, setAddress] = useState<string>("Locating...");
   const [district, setDistrict] = useState<string | null>(null);
+  const [pincode, setPincode] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
@@ -1477,12 +1478,14 @@ function SubmitRouteForm({
               data.address?.city_district ||
               null,
             );
+            setPincode(data.address?.postcode || null);
           }
         })
         .catch(() => {
           if (active) {
             setAddress("Unknown Location");
             setDistrict(null);
+            setPincode(null);
           }
         });
     }
@@ -1509,6 +1512,7 @@ function SubmitRouteForm({
         upvoterIds: [],
       };
       if (district) payload.district = district;
+      if (pincode) payload.pincode = pincode;
       if (notes.trim()) payload.notes = notes.trim();
       if (imageUrl) payload.imageUrl = imageUrl;
       if (constituency) {
