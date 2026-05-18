@@ -1708,7 +1708,7 @@ function MapSearch() {
   };
 
   return (
-    <div className="absolute z-[1000] bottom-14 left-4 right-4 md:bottom-auto md:top-4 md:left-auto md:w-64 flex flex-col pointer-events-none">
+    <div className="absolute z-[1000] bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 md:bottom-auto md:top-[max(1rem,env(safe-area-inset-top,1rem))] md:left-auto md:w-64 flex flex-col pointer-events-none">
       <div className="relative pointer-events-auto shadow-[0_0_15px_rgba(0,0,0,0.5)]">
         <input
           type="text"
@@ -1716,12 +1716,13 @@ function MapSearch() {
           onChange={(e) => searchPlaces(e.target.value)}
           onFocus={() => setShowResults(true)}
           placeholder="SEARCH LOCATION..."
-          className="w-full bg-black/90 border border-cyan-500/50 text-cyan-400 pl-8 pr-3 py-2 text-xs uppercase tracking-widest outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] placeholder:text-cyan-500/30 font-mono backdrop-blur-md"
+          style={{ fontSize: 16 }}
+          className="w-full bg-black/90 border border-cyan-500/50 text-cyan-400 pl-8 pr-3 py-2 uppercase tracking-widest outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] placeholder:text-cyan-500/30 font-mono backdrop-blur-md"
         />
         <Search className="w-4 h-4 text-cyan-500/50 absolute left-2.5 top-1/2 -translate-y-1/2" />
 
         {showResults && results.length > 0 && (
-          <div className="absolute bottom-full mb-1 md:bottom-auto md:top-full md:mt-1 md:mb-0 w-full bg-black/95 border border-cyan-500/30 max-h-60 overflow-y-auto backdrop-blur-md">
+          <div className="absolute bottom-full mb-1 md:bottom-auto md:top-full md:mt-1 md:mb-0 w-full bg-black/95 border border-cyan-500/30 max-h-[min(15rem,50vh)] overflow-y-auto backdrop-blur-md">
             {results.map((r, i) => (
               <button
                 key={i}
