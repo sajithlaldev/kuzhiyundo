@@ -3,6 +3,10 @@ export interface ConstituencyInfo {
   acNo: number;
   district: string;
   pcName: string;
+  lsgd?: string;
+  lsgdType?: string;
+  lsgdLabel?: string;
+  lsgCode?: string;
 }
 
 export async function getConstituency(

@@ -562,10 +562,9 @@ function RenderReports({ reports }: { reports: any[] }) {
                 );
                 if (!ac) return null;
                 return (
-                  <div className="text-[9px] m-0 text-orange-400/90 uppercase leading-tight border-l-2 border-orange-400/50 pl-1">
-                    <span className="font-bold mr-1">Accountable:</span>
-                    {ac.acName} AC
-                    {ac.pcName ? ` · ${ac.pcName} PC` : ""}
+                  <div className="text-[9px] m-0 text-orange-400/90 uppercase leading-tight border-l-2 border-orange-400/50 pl-1 flex flex-col gap-0.5">
+                    {ac.lsgdLabel && <span><span className="font-bold">Body:</span> {ac.lsgdLabel}</span>}
+                    {ac.acName && <span><span className="font-bold">AC:</span> {ac.acName}{ac.pcName ? ` · ${ac.pcName} PC` : ""}</span>}
                   </div>
                 );
               })()}
@@ -953,8 +952,15 @@ function ReportDetailSheet({ report, ac, user, onVote, onClose }: any) {
             <div className="text-[9px] uppercase tracking-widest text-cyan-500/60 mb-1">Kuzhi Report</div>
             <div className="text-sm font-bold text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
             {ac && (
-              <div className="text-[10px] text-orange-400/80 mt-0.5">
-                {ac.acName} AC · {ac.pcName} PC
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                {ac.lsgdLabel && (
+                  <div className="text-[10px] text-orange-400/80">{ac.lsgdLabel}</div>
+                )}
+                {ac.acName && (
+                  <div className="text-[10px] text-orange-400/60">
+                    {ac.acName} AC{ac.pcName ? ` · ${ac.pcName} PC` : ""}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1010,10 +1016,23 @@ function ReportDetailSheet({ report, ac, user, onVote, onClose }: any) {
                 <div className="text-cyan-300 font-bold">{report.district}</div>
               </div>
             )}
-            {ac && (
+            {ac?.lsgdLabel && (
+              <div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Local Body</div>
+                <div className="text-orange-400 font-bold">{ac.lsgdLabel}</div>
+                {ac.lsgdType && <div className="text-cyan-500/50 text-[9px]">{ac.lsgdType}</div>}
+              </div>
+            )}
+            {ac?.acName && (
               <div>
                 <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Constituency</div>
                 <div className="text-orange-400 font-bold">{ac.acName} (#{ac.acNo})</div>
+              </div>
+            )}
+            {ac?.pcName && (
+              <div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Parliament</div>
+                <div className="text-orange-400 font-bold">{ac.pcName}</div>
               </div>
             )}
             <div>
@@ -1442,6 +1461,9 @@ function SubmitRouteForm({
         payload.acName = constituency.acName;
         payload.acNo = constituency.acNo;
         payload.pcName = constituency.pcName;
+        if (constituency.lsgd)      payload.lsgd      = constituency.lsgd;
+        if (constituency.lsgdType)  payload.lsgdType  = constituency.lsgdType;
+        if (constituency.lsgdLabel) payload.lsgdLabel = constituency.lsgdLabel;
       }
 
       await addDoc(collection(db, "potholes"), payload);
