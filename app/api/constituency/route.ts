@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
+import { verifyAppCheckToken } from "@/lib/appcheck-verify";
 
 export const runtime = "edge";
 
@@ -28,6 +29,11 @@ async function getFeatures() {
 }
 
 export async function GET(req: NextRequest) {
+  const appCheckToken = req.headers.get("X-Firebase-AppCheck");
+  if (!appCheckToken || !(await verifyAppCheckToken(appCheckToken))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const lat = parseFloat(req.nextUrl.searchParams.get("lat") ?? "");
   const lng = parseFloat(req.nextUrl.searchParams.get("lng") ?? "");
 

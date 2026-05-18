@@ -1,3 +1,5 @@
+import { fetchWithAppCheck } from "./appcheck-fetch";
+
 export interface ConstituencyInfo {
   acName: string;
   acNo: number;
@@ -14,7 +16,7 @@ export async function getConstituency(
   lng: number,
 ): Promise<ConstituencyInfo | null> {
   try {
-    const res = await fetch(`/api/constituency?lat=${lat}&lng=${lng}`);
+    const res = await fetchWithAppCheck(`/api/constituency?lat=${lat}&lng=${lng}`);
     if (!res.ok) return null;
     return await res.json();
   } catch {

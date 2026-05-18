@@ -17,6 +17,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { motion, AnimatePresence } from "motion/react";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
+import { fetchWithAppCheck } from "../lib/appcheck-fetch";
 import { initClarity } from "../lib/clarity";
 import { getConstituency } from "../lib/constituency";
 import { useAuthStore } from "../lib/store";
@@ -1691,7 +1692,7 @@ function MapSearch() {
     }
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(text)}`);
+      const res = await fetchWithAppCheck(`/api/search?q=${encodeURIComponent(text)}`);
       const data = await res.json();
       setResults(Array.isArray(data) ? data : []);
     } catch (e) {

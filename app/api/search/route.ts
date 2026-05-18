@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyAppCheckToken } from "@/lib/appcheck-verify";
 
 export const runtime = "edge";
 
 export async function GET(req: NextRequest) {
+  const appCheckToken = req.headers.get("X-Firebase-AppCheck");
+  if (!appCheckToken || !(await verifyAppCheckToken(appCheckToken))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const q = req.nextUrl.searchParams.get("q");
   if (!q) return NextResponse.json([]);
 

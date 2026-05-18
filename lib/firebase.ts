@@ -20,11 +20,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
+export let appCheck: ReturnType<typeof initializeAppCheck> | null = null;
+
 if (
   typeof window !== "undefined" &&
   process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 ) {
-  initializeAppCheck(app, {
+  appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider(
       process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
     ),
