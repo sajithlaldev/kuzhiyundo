@@ -104,6 +104,7 @@ export default function LeafletPotholeMap() {
   const [currentPathEncoded, setCurrentPathEncoded] = useState<string | null>(
     null,
   );
+  const [pointsConfirmed, setPointsConfirmed] = useState(false);
 
   useEffect(() => { initClarity(); }, []);
 
@@ -137,6 +138,7 @@ export default function LeafletPotholeMap() {
     setOrigin(null);
     setDestination(null);
     setCurrentPathEncoded(null);
+    setPointsConfirmed(false);
   };
 
   return (
@@ -157,15 +159,16 @@ export default function LeafletPotholeMap() {
           reportingMode={reportingMode}
           origin={origin}
           destination={destination}
-          setOrigin={setOrigin}
+          pointsConfirmed={pointsConfirmed}
+          setOrigin={(pos) => { setOrigin(pos); setDestination(null); setCurrentPathEncoded(null); setPointsConfirmed(false); }}
           setDestination={setDestination}
         />
 
         {/* Existing Reports */}
         <RenderReports reports={reports} />
 
-        {/* Current Reporting Route */}
-        {reportingMode && origin && destination && (
+        {/* Current Reporting Route — only after user confirms both points */}
+        {reportingMode && origin && destination && pointsConfirmed && (
           <RouteDisplay
             origin={origin}
             destination={destination}
@@ -174,9 +177,12 @@ export default function LeafletPotholeMap() {
           />
         )}
 
-        {/* Single Marker before destination is picked */}
-        {reportingMode && origin && !destination && (
+        {/* Markers while picking points */}
+        {reportingMode && origin && !pointsConfirmed && (
           <Marker position={origin} icon={redMarkerIcon} />
+        )}
+        {reportingMode && destination && !pointsConfirmed && (
+          <Marker position={destination} icon={redMarkerIcon} />
         )}
 
         <ReportingOverlay
@@ -185,6 +191,8 @@ export default function LeafletPotholeMap() {
           setReportingMode={setReportingMode}
           origin={origin}
           destination={destination}
+          pointsConfirmed={pointsConfirmed}
+          onConfirmPoints={() => setPointsConfirmed(true)}
           currentPathEncoded={currentPathEncoded}
           severity={reportingSeverity}
           setSeverity={setReportingSeverity}
@@ -247,22 +255,27 @@ function MapEventsHandler({
   reportingMode,
   origin,
   destination,
+  pointsConfirmed,
   setOrigin,
   setDestination,
 }: {
   reportingMode: boolean;
   origin: { lat: number; lng: number } | null;
   destination: { lat: number; lng: number } | null;
+  pointsConfirmed: boolean;
   setOrigin: (pos: { lat: number; lng: number }) => void;
   setDestination: (pos: { lat: number; lng: number }) => void;
 }) {
   useMapEvents({
     click(e) {
-      if (!reportingMode) return;
+      if (!reportingMode || pointsConfirmed) return;
       if (!origin) {
         setOrigin(e.latlng);
       } else if (!destination) {
         setDestination(e.latlng);
+      } else {
+        // Both points set but not confirmed — restart with new origin
+        setOrigin(e.latlng);
       }
     },
   });
@@ -1164,6 +1177,8 @@ function ReportingOverlay({
   setReportingMode,
   origin,
   destination,
+  pointsConfirmed,
+  onConfirmPoints,
   currentPathEncoded,
   severity,
   setSeverity,
@@ -1381,6 +1396,18 @@ function ReportingOverlay({
             <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Step 2: End Point</h3>
             <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest">&gt; tap map where kuzhi ends</p>
           </>
+        ) : !pointsConfirmed ? (
+          <>
+            <Navigation className="w-6 h-6 text-cyan-400 mb-3" />
+            <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Points Selected</h3>
+            <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest mb-4">&gt; tap map to reselect start point</p>
+            <button
+              onClick={onConfirmPoints}
+              className="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-[11px] uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(0,255,255,0.4)]"
+            >
+              Confirm Points
+            </button>
+          </>
         ) : (
           <SubmitRouteForm
             currentPathEncoded={currentPathEncoded}
@@ -1391,7 +1418,7 @@ function ReportingOverlay({
           />
         )}
 
-        {(!origin || !destination) && (
+        {!pointsConfirmed && (
           <button onClick={onCancel} className="mt-6 text-[10px] text-cyan-500/50 hover:text-red-400 uppercase tracking-widest transition-colors">
             [ CANCEL ]
           </button>
