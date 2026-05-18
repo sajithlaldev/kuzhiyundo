@@ -1192,6 +1192,11 @@ function ReportingOverlay({
   const [isDesktopHovered, setIsDesktopHovered] = useState(false);
   const [showSignInReportPrompt, setShowSignInReportPrompt] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [activeSnap, setActiveSnap] = useState<string | number>("180px");
+  useEffect(() => {
+    if (currentPathEncoded) setActiveSnap(0.5);
+    else setActiveSnap("180px");
+  }, [currentPathEncoded]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
@@ -1381,12 +1386,6 @@ function ReportingOverlay({
     </>
     );
   }
-
-  const [activeSnap, setActiveSnap] = useState<string | number>("180px");
-  useEffect(() => {
-    if (currentPathEncoded) setActiveSnap(0.5);
-    else setActiveSnap("180px");
-  }, [currentPathEncoded]);
 
   return (
     <DrawerRoot
