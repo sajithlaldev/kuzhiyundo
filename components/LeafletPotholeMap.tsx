@@ -1149,9 +1149,9 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
         if (cancelled || !data) return;
         setRoadAuthority(data.roadAuthority);
         setHighwayTag(data.highwayTag);
-        updateDoc(doc(db, "potholes", reportId), data).catch(() => {});
+        updateDoc(doc(db, "potholes", reportId), data).catch(() => { });
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, [reportId, roadAuthority]);
 
@@ -1185,7 +1185,6 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
 
 function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
-  const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (ac) return;
@@ -1220,7 +1219,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
     `🚧 Pothole reported in ${report.address || "Unknown Location"}`,
     `Severity: ${(report.severity || "low").toUpperCase()} | Score: ${upvoters.length - downvoters.length > 0 ? "+" : ""}${upvoters.length - downvoters.length}`,
     reporterLine,
-    `Reported on kuzhiyundo.com`,
+    `Reported on kuzhiyundo?`,
   ].filter(Boolean).join("\n");
 
   const buildRouteImage = (): string | null => {
@@ -1271,35 +1270,9 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   };
 
   const handleShare = async () => {
-    let imageFile: File | null = null;
-    if (sheetRef.current) {
-      try {
-        const { default: html2canvas } = await import("html2canvas");
-        const scale = window.devicePixelRatio * 2;
-        const canvas = await html2canvas(sheetRef.current, {
-          backgroundColor: "#000000",
-          scale,
-          useCORS: false,
-          allowTaint: false,
-          ignoreElements: (el) => el.hasAttribute("data-html2canvas-ignore"),
-        });
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = "high";
-        }
-        const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
-        if (blob) imageFile = new File([blob], "pothole-report.png", { type: "image/png" });
-      } catch { }
-    }
-
     if (navigator.share) {
       try {
-        const shareData: ShareData = { title: "Kuzhiyundo — Pothole Report", text: shareText, url: shareUrl };
-        if (imageFile && navigator.canShare?.({ files: [imageFile] })) {
-          shareData.files = [imageFile];
-        }
-        await navigator.share(shareData);
+        await navigator.share({ title: "Kuzhiyundo — Pothole Report", text: shareText, url: shareUrl });
         return;
       } catch { }
     }
@@ -1321,7 +1294,6 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         transition={{ duration: 0.2 }}
       />
       <motion.div
-        ref={sheetRef}
         className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.nativeEvent.stopPropagation()}
@@ -1374,9 +1346,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         <div className="px-4 py-3 flex flex-col gap-3">
           {/* Mini map */}
           {report.encodedPath && (
-            <div data-html2canvas-ignore>
-              <MiniMap reportId={report.id} encodedPath={report.encodedPath} severity={report.severity || "low"} roadAuthority={report.roadAuthority} highwayTag={report.highwayTag} />
-            </div>
+            <MiniMap reportId={report.id} encodedPath={report.encodedPath} severity={report.severity || "low"} roadAuthority={report.roadAuthority} highwayTag={report.highwayTag} />
           )}
 
           {/* Severity + Status + Score */}
