@@ -1,0 +1,27 @@
+# Kuzhiyundo
+
+> Community-driven pothole tracking map for Kerala, India.
+
+Kuzhiyundo (meaning "Is there a pothole?" in Malayalam) is an open-source platform where residents can report, upvote, and track road potholes across Kerala. Reports include severity, location, constituency info, and road authority classification.
+
+## Features
+
+- Interactive map showing community-reported potholes across Kerala
+- Report a pothole by tracing a road segment on the map
+- Severity classification: low, medium, high
+- Road authority tagging: Ward Member, Panchayat/LSGD, MLA/State PWD, MP/NHAI
+- Constituency lookup: Assembly, Parliamentary, and LSGD boundaries
+- Community voting to confirm or dispute reports
+- Photo uploads for visual evidence
+
+## Data
+
+- Reports are geolocated with encoded polyline paths
+- Each report includes address, district, pincode, AC/PC/LSGD constituency
+- Road authority derived from OpenStreetMap highway tags via Overpass API
+- Real-time updates via Firebase Firestore
+
+## Links
+
+- App: https://kuzhiyundo.com
+- Source: https://github.com/sajithlaldev/kuzhiyundo

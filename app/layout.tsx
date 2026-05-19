@@ -16,12 +16,15 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Kuzhiyundo? | Community Pothole Tracker for Kerala',
-  description: 'Community-driven pothole tracking mapping. Report and avoid kuzhis (potholes) in your area with our interactive map.',
-  keywords: 'potholes, road conditions, traffic, map, community tracking, kuzhi, Kerala roads',
+  description: 'Community-driven pothole tracking map for Kerala. Report and avoid kuzhis (potholes) in your area with our interactive map.',
+  keywords: 'potholes, road conditions, traffic, map, community tracking, kuzhi, Kerala roads, pothole tracker, road damage, LSGD, PWD, Kerala',
   metadataBase: new URL('https://kuzhiyundo.com'),
+  alternates: {
+    canonical: 'https://kuzhiyundo.com',
+  },
   openGraph: {
     title: 'Kuzhiyundo? | Community Pothole Tracker for Kerala',
-    description: 'Community-driven pothole tracking mapping. Report and avoid kuzhis (potholes) in your area with our interactive map.',
+    description: 'Community-driven pothole tracking map for Kerala. Report and avoid kuzhis (potholes) in your area with our interactive map.',
     url: 'https://kuzhiyundo.com',
     siteName: 'Kuzhiyundo?',
     locale: 'en_IN',
@@ -40,16 +43,46 @@ export const metadata: Metadata = {
     title: 'Kuzhiyundo? | Community Pothole Tracker for Kerala',
     description: 'Community-driven pothole tracking map. Report and avoid kuzhis.',
     images: ['/twitter-image'],
+    site: '@kuzhiyundo',
+    creator: '@kuzhiyundo',
   },
   icons: {
     icon: '/favicon.svg',
     apple: '/favicon.svg',
   },
+  category: 'travel',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Kuzhiyundo?",
+  url: "https://kuzhiyundo.com",
+  description: "Community-driven pothole tracking map for Kerala. Report and avoid kuzhis (potholes) with an interactive map.",
+  applicationCategory: "TravelApplication",
+  operatingSystem: "Web",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+  areaServed: { "@type": "State", name: "Kerala", containedInPlace: { "@type": "Country", name: "India" } },
+  inLanguage: ["en", "ml"],
+  creator: { "@type": "Organization", name: "Kuzhiyundo", url: "https://kuzhiyundo.com" },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${caveat.variable}`}>
+      <head>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      </head>
       <body suppressHydrationWarning className="font-sans bg-black text-white antialiased">{children}</body>
     </html>
   );
