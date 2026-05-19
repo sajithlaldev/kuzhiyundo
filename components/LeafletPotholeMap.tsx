@@ -16,7 +16,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "motion/react";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
 import { fetchWithAppCheck } from "../lib/appcheck-fetch";
 import { initClarity } from "../lib/clarity";
@@ -1293,6 +1293,9 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
     navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => { });
   };
 
+  const dragY = useMotionValue(0);
+  const backdropOpacity = useTransform(dragY, [0, 300], [1, 0]);
+
   return (
     <>
       <motion.div
@@ -1302,6 +1305,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
+        style={{ opacity: backdropOpacity }}
       />
       <motion.div
         className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]"
@@ -1310,10 +1314,19 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        drag="y"
+        dragConstraints={{ top: 0 }}
+        dragElastic={{ top: 0.1, bottom: 0.4 }}
+        style={{ y: dragY }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 100 || info.velocity.y > 400) {
+            onClose();
+          }
+        }}
       >
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1 sticky top-0">
-          <div className="w-10 h-1 rounded-full bg-cyan-500/30" />
+        <div className="flex justify-center pt-3 pb-2 sticky top-0 cursor-grab active:cursor-grabbing">
+          <div className="w-12 h-1.5 rounded-full bg-cyan-500/40" />
         </div>
 
         {/* Header */}
