@@ -2029,7 +2029,7 @@ function MapSearch() {
   };
 
   return (
-    <div className="absolute z-[1000] bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 md:bottom-auto md:top-[max(1rem,env(safe-area-inset-top,1rem))] md:left-auto md:w-64 flex flex-col pointer-events-none">
+    <div className="absolute z-[1000] bottom-[calc(4.5rem_+_env(safe-area-inset-bottom,0px))] left-4 right-4 md:bottom-auto md:top-[max(1rem,env(safe-area-inset-top,1rem))] md:left-auto md:w-64 flex flex-col pointer-events-none">
       <div className="relative pointer-events-auto shadow-[0_0_15px_rgba(0,0,0,0.5)]">
         <input
           type="text"
