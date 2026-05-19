@@ -1129,14 +1129,18 @@ function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: str
         const period = severity === "high" ? 1500 : 3000;
         let start: number | null = null;
         const breathe = (ts: number) => {
+          const m = mapRef.current;
+          if (!m) return;
           if (!start) start = ts;
           const t = ((ts - start) % period) / period;
           const opacity = 0.15 + 0.35 * Math.abs(Math.sin(t * Math.PI));
           const width = 8 + 6 * Math.abs(Math.sin(t * Math.PI));
-          if (map.getLayer("route-glow")) {
-            map.setPaintProperty("route-glow", "line-opacity", opacity);
-            map.setPaintProperty("route-glow", "line-width", width);
-          }
+          try {
+            if (m.getLayer("route-glow")) {
+              m.setPaintProperty("route-glow", "line-opacity", opacity);
+              m.setPaintProperty("route-glow", "line-width", width);
+            }
+          } catch { }
           glowRafRef.current = requestAnimationFrame(breathe);
         };
         glowRafRef.current = requestAnimationFrame(breathe);
