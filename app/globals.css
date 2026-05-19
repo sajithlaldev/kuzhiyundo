@@ -25,6 +25,13 @@
   --font-handwriting: var(--font-handwriting);
 }
 
+/* Kill Leaflet's popup open/close animation (the "jiggle" on click) */
+.leaflet-popup,
+.leaflet-zoom-anim .leaflet-popup {
+  transition: none !important;
+  animation: none !important;
+}
+
 .leaflet-popup-content-wrapper {
   background: transparent !important;
   box-shadow: none !important;

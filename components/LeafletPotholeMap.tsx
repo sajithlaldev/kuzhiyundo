@@ -559,12 +559,12 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
     }
   };
 
-  const createDotIcon = (color: string, severity: string) => {
+  const createDotIcon = (color: string, severity: string, isSelected = false) => {
     const icon = L.divIcon({
       className: "bg-transparent",
       html: `
         <div class="marker-pulse-container relative -left-1.5 -top-1.5" data-severity="${severity}">
-          <div class="marker-pulse-ring" style="background-color: ${color};"></div>
+          ${isSelected ? "" : `<div class="marker-pulse-ring" style="background-color: ${color};"></div>`}
           <div class="marker-pulse-dot" style="background-color: ${color}; box-shadow: 0 0 10px ${color};"></div>
         </div>
       `,
@@ -923,6 +923,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                 icon={createDotIcon(
                   getColor(displaySeverity),
                   displaySeverity || "low",
+                  detailReportId === report.id,
                 )}
                 eventHandlers={{
                   click: (e: any) => {
@@ -970,14 +971,14 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                       e.target._map.flyToBounds(L.latLngBounds(path), {
                         maxZoom: 16,
                         padding: [50, 50],
-                        duration: 1,
+                        duration: 0.8,
                       });
                     }
+                    fetchConstituency(report);
+                    setDetailReportId(report.id);
                   },
                 }}
-              >
-                {renderPopup(report)}
-              </Polyline>
+              />
             );
           } catch (e) {
             return null;
