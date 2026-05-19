@@ -1125,9 +1125,12 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
     }).addTo(map);
 
     const color = getColor(severity);
-    L.polyline(coords, { color, weight: 5, opacity: 0.9 }).addTo(map);
+    L.polyline(coords, {
+      color, weight: 5, opacity: 0.9,
+      className: severity === "high" ? "animated-polyline-high" : "animated-polyline",
+    }).addTo(map);
 
-    map.fitBounds(L.latLngBounds(coords), { padding: [30, 30], animate: false });
+    map.fitBounds(L.latLngBounds(coords), { padding: [10, 10], animate: false });
 
     return () => {
       map.remove();
@@ -1182,6 +1185,7 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
 
 function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (ac) return;
@@ -1267,9 +1271,29 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   };
 
   const handleShare = async () => {
+    let imageFile: File | null = null;
+    if (sheetRef.current) {
+      try {
+        const { default: html2canvas } = await import("html2canvas");
+        const canvas = await html2canvas(sheetRef.current, {
+          backgroundColor: "#000000",
+          scale: 2,
+          useCORS: false,
+          allowTaint: false,
+          ignoreElements: (el) => el.hasAttribute("data-html2canvas-ignore"),
+        });
+        const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
+        if (blob) imageFile = new File([blob], "pothole-report.png", { type: "image/png" });
+      } catch { }
+    }
+
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Kuzhiyundo — Pothole Report", text: shareText, url: shareUrl });
+        const shareData: ShareData = { title: "Kuzhiyundo — Pothole Report", text: shareText, url: shareUrl };
+        if (imageFile && navigator.canShare?.({ files: [imageFile] })) {
+          shareData.files = [imageFile];
+        }
+        await navigator.share(shareData);
         return;
       } catch { }
     }
@@ -1291,6 +1315,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         transition={{ duration: 0.2 }}
       />
       <motion.div
+        ref={sheetRef}
         className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.nativeEvent.stopPropagation()}
@@ -1343,7 +1368,9 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         <div className="px-4 py-3 flex flex-col gap-3">
           {/* Mini map */}
           {report.encodedPath && (
-            <MiniMap reportId={report.id} encodedPath={report.encodedPath} severity={report.severity || "low"} roadAuthority={report.roadAuthority} highwayTag={report.highwayTag} />
+            <div data-html2canvas-ignore>
+              <MiniMap reportId={report.id} encodedPath={report.encodedPath} severity={report.severity || "low"} roadAuthority={report.roadAuthority} highwayTag={report.highwayTag} />
+            </div>
           )}
 
           {/* Severity + Status + Score */}
