@@ -1275,13 +1275,19 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
     if (sheetRef.current) {
       try {
         const { default: html2canvas } = await import("html2canvas");
+        const scale = window.devicePixelRatio * 2;
         const canvas = await html2canvas(sheetRef.current, {
           backgroundColor: "#000000",
-          scale: 2,
+          scale,
           useCORS: false,
           allowTaint: false,
           ignoreElements: (el) => el.hasAttribute("data-html2canvas-ignore"),
         });
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+        }
         const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
         if (blob) imageFile = new File([blob], "pothole-report.png", { type: "image/png" });
       } catch { }
@@ -1355,12 +1361,12 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 ml-3 mt-1 shrink-0">
+          <div className="flex items-center gap-3 ml-3 mt-1 shrink-0">
             <button onClick={handleShare} className="text-cyan-500/50 hover:text-cyan-400">
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-5 h-5" />
             </button>
             <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400">
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
