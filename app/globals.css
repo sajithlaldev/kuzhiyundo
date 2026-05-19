@@ -49,17 +49,6 @@
   width: auto !important;
 }
 
-.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
-  background-color: rgba(0, 240, 255, 0.2) !important;
-}
-.marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
-  background-color: rgba(0, 240, 255, 0.8) !important;
-  border: 1px solid #00f0ff;
-  color: black;
-  font-family: var(--font-mono);
-  font-weight: bold;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
-}
 
 @keyframes pulse-ring {
   0% { transform: scale(0.8); opacity: 0.8; }

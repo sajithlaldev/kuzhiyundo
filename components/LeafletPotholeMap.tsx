@@ -15,7 +15,6 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import "maplibre-gl/dist/maplibre-gl.css";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "motion/react";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
 import { fetchWithAppCheck } from "../lib/appcheck-fetch";
@@ -57,7 +56,6 @@ import {
   Share2,
   Link,
   Copy,
-  Orbit,
   Bug,
   ExternalLink,
 } from "lucide-react";
@@ -400,6 +398,18 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
   const [showSignInVotePrompt, setShowSignInVotePrompt] = useState(false);
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
+
+  useEffect(() => {
+    if (detailReportId) {
+      map.dragging.disable();
+      map.touchZoom.disable();
+      map.scrollWheelZoom.disable();
+    } else {
+      map.dragging.enable();
+      map.touchZoom.enable();
+      map.scrollWheelZoom.enable();
+    }
+  }, [detailReportId, map]);
 
   useEffect(() => {
     if (!pendingDeepLinkId) return;
@@ -889,21 +899,25 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
           const totalWeight = highCount * 3 + mediumCount * 2 + lowCount * 1;
           const avgWeight = totalWeight / markers.length;
 
-          let avgColor = "#00f0ff"; // default low
+          let light = "#a0ffff", mid = "#00f0ff", dark = "#008fab";
           if (avgWeight >= 2.5) {
-            avgColor = "#ff003c"; // high
+            light = "#ff8099"; mid = "#ff003c"; dark = "#8b0020";
           } else if (avgWeight >= 1.5) {
-            avgColor = "#ff9900"; // medium
+            light = "#ffd080"; mid = "#ff9900"; dark = "#a05c00";
           }
 
           return L.divIcon({
             html: `
-              <div style="background-color: ${avgColor}; box-shadow: 0 0 15px ${avgColor}; border-color: ${avgColor}; border-width: 2px" class="w-10 h-10 rounded-full flex items-center justify-center text-black font-bold border-black/50 text-sm shadow-[0_0_15px_currentColor]">
-                ${markers.length}
-              </div>
+              <div style="
+                width:28px;height:28px;border-radius:50%;
+                background:radial-gradient(circle at 35% 30%, ${light} 0%, ${mid} 45%, ${dark} 100%);
+                box-shadow:0 0 8px ${mid}bb, inset 0 1px 3px rgba(255,255,255,0.3);
+                display:flex;align-items:center;justify-content:center;
+                font-size:9px;font-weight:bold;color:#001a1f;font-family:monospace;
+              ">${markers.length}</div>
             `,
             className: "bg-transparent",
-            iconSize: L.point(40, 40, true),
+            iconSize: L.point(28, 28, true),
           });
         }}
       >
@@ -1073,139 +1087,48 @@ function SignInToReportModal({ onClose }: { onClose: () => void }) {
 }
 
 function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: string }) {
-  const [orbitActive, setOrbitActive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const rafRef = useRef<number>(0);
-  const glowRafRef = useRef<number>(0);
-  const loadedRef = useRef(false);
-  const baseZoomRef = useRef<number>(15);
+  const mapRef = useRef<L.Map | null>(null);
 
-  // coords as [lng, lat] for MapLibre GeoJSON
-  const coords = decode(encodedPath).map(([lat, lng]) => [lng, lat] as [number, number]);
+  const coords = decode(encodedPath).map(([lat, lng]) => [lat, lng] as [number, number]);
 
   useEffect(() => {
     if (!containerRef.current || !coords.length) return;
 
-    import("maplibre-gl").then(({ Map, LngLatBounds }) => {
-      if (!containerRef.current) return;
-      const map = new Map({
-        container: containerRef.current,
-        style: "https://tiles.openfreemap.org/styles/dark",
-        interactive: false,
-        attributionControl: false,
-      });
-      mapRef.current = map;
-
-      map.on("load", () => {
-        loadedRef.current = true;
-
-        map.addSource("route", {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            properties: {},
-            geometry: { type: "LineString", coordinates: coords },
-          },
-        });
-        map.addLayer({
-          id: "route-glow",
-          type: "line",
-          source: "route",
-          paint: { "line-color": getColor(severity), "line-width": 10, "line-opacity": 0.25, "line-blur": 6 },
-        });
-        map.addLayer({
-          id: "route-line",
-          type: "line",
-          source: "route",
-          paint: { "line-color": getColor(severity), "line-width": 4, "line-opacity": 0.95 },
-        });
-
-        const bounds = coords.reduce(
-          (b, c) => b.extend(c as [number, number]),
-          new LngLatBounds(coords[0], coords[0]),
-        );
-        map.fitBounds(bounds, { padding: 40, animate: false });
-        map.once("idle", () => { baseZoomRef.current = map.getZoom(); });
-
-        // breathing glow animation
-        const period = severity === "high" ? 1500 : 3000;
-        let start: number | null = null;
-        const breathe = (ts: number) => {
-          const m = mapRef.current;
-          if (!m) return;
-          if (!start) start = ts;
-          const t = ((ts - start) % period) / period;
-          const opacity = 0.15 + 0.35 * Math.abs(Math.sin(t * Math.PI));
-          const width = 8 + 6 * Math.abs(Math.sin(t * Math.PI));
-          try {
-            if (m.getLayer("route-glow")) {
-              m.setPaintProperty("route-glow", "line-opacity", opacity);
-              m.setPaintProperty("route-glow", "line-width", width);
-            }
-          } catch { }
-          glowRafRef.current = requestAnimationFrame(breathe);
-        };
-        glowRafRef.current = requestAnimationFrame(breathe);
-      });
+    const map = L.map(containerRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      touchZoom: false,
     });
+    mapRef.current = map;
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+    }).addTo(map);
+
+    const color = getColor(severity);
+    L.polyline(coords, { color, weight: 5, opacity: 0.9 }).addTo(map);
+
+    map.fitBounds(L.latLngBounds(coords), { padding: [30, 30], animate: false });
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
-      cancelAnimationFrame(glowRafRef.current);
-      mapRef.current?.remove();
+      map.remove();
       mapRef.current = null;
-      loadedRef.current = false;
     };
   }, [encodedPath]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !loadedRef.current) return;
-
-    cancelAnimationFrame(rafRef.current);
-
-    if (!orbitActive) {
-      map.easeTo({ pitch: 0, bearing: 0, zoom: baseZoomRef.current, duration: 700 });
-      return;
-    }
-
-    baseZoomRef.current = map.getZoom();
-    map.easeTo({ pitch: 60, zoom: baseZoomRef.current + 1.5, duration: 700 });
-
-    const startOrbit = () => {
-      let bearing = map.getBearing();
-      const tick = () => {
-        bearing += 0.12;
-        map.setBearing(bearing);
-        rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    const t = setTimeout(startOrbit, 750);
-    return () => clearTimeout(t);
-  }, [orbitActive]);
 
   if (!coords.length) return null;
 
   return (
-    <div className="relative">
-      <div
-        ref={containerRef}
-        style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)", overflow: "hidden" }}
-      />
-      <button
-        onClick={(e) => { e.stopPropagation(); setOrbitActive((v) => !v); }}
-        title={orbitActive ? "Stop orbit" : "3D orbit"}
-        className={`absolute bottom-2 right-2 z-[1000] flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${orbitActive
-          ? "bg-cyan-500/90 text-black shadow-[0_0_8px_rgba(0,255,255,0.6)]"
-          : "bg-black/60 text-cyan-400 border border-cyan-500/40 hover:border-cyan-400"
-          }`}
-      >
-        <Orbit size={12} className={orbitActive ? "animate-spin" : ""} style={orbitActive ? { animationDuration: "2s" } : {}} />
-        {orbitActive ? "Orbiting" : "3D"}
-      </button>
-    </div>
+    <div
+      ref={containerRef}
+      style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)", overflow: "hidden" }}
+    />
   );
 }
 
@@ -1245,7 +1168,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
     `🚧 Pothole reported in ${report.address || "Unknown Location"}`,
     `Severity: ${(report.severity || "low").toUpperCase()} | Score: ${upvoters.length - downvoters.length > 0 ? "+" : ""}${upvoters.length - downvoters.length}`,
     reporterLine,
-    `Reported on Kuzhiyundo`,
+    `Reported on kuzhiyundo.com`,
   ].filter(Boolean).join("\n");
 
   const buildRouteImage = (): string | null => {
@@ -1306,22 +1229,24 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   };
 
   const dragY = useMotionValue(0);
-  const backdropOpacity = useTransform(dragY, [0, 300], [1, 0]);
 
   return (
     <>
       <motion.div
         className="fixed inset-0 z-[2500] bg-black/50 backdrop-blur-sm"
         onClick={onClose}
+        onPointerDown={(e) => e.nativeEvent.stopPropagation()}
+        onTouchStart={(e) => e.nativeEvent.stopPropagation()}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        style={{ opacity: backdropOpacity }}
       />
       <motion.div
         className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]"
         onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.nativeEvent.stopPropagation()}
+        onTouchStart={(e) => e.nativeEvent.stopPropagation()}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
