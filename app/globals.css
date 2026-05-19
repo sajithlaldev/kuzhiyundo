@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* dvh (dynamic viewport height) fills the actual visible area on Chrome/Android,
+   excluding the URL bar. 100vh fallback for browsers that don't support dvh yet. */
+.h-dvh-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+
 @theme {
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
