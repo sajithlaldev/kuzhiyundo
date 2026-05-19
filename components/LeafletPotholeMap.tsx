@@ -635,10 +635,19 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                 {report.address || "Unknown Location"}
               </div>
 
-              {(() => {
+              {report.roadAuthority ? (() => {
+                const auth = getRoadAuthority(report.highwayTag);
+                const label = report.roadAuthority === "ward" ? "Ward Member" : report.roadAuthority === "lsgd" ? "Panchayat / LSGD" : report.roadAuthority === "pwd" ? "MLA / State PWD" : "MP / NHAI";
+                return (
+                  <div className="text-[9px] m-0 uppercase leading-tight border-l-2 pl-1 flex flex-col gap-0.5" style={{ borderColor: auth.color + "80" }}>
+                    <span style={{ color: auth.color }}><span className="font-bold">Auth:</span> {auth.label}</span>
+                    <span className="text-cyan-500/60">→ {label}</span>
+                  </div>
+                );
+              })() : (() => {
                 const ac = report.acName ? report : constituencyMap[report.id];
                 if (ac === undefined) return (
-                  <div className="text-[9px] text-cyan-500/40 italic">loading constituency…</div>
+                  <div className="text-[9px] text-cyan-500/40 italic">loading…</div>
                 );
                 if (!ac) return null;
                 return (
@@ -989,10 +998,12 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                       });
                     }
                     fetchConstituency(report);
-                    setDetailReportId(report.id);
+                    e.target?.openPopup(e.latlng);
                   },
                 }}
-              />
+              >
+                {renderPopup(report)}
+              </Polyline>
             );
           } catch (e) {
             return null;
@@ -1086,9 +1097,11 @@ function SignInToReportModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: string }) {
+function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAuthority, highwayTag: initialHighwayTag }: { reportId: string; encodedPath: string; severity: string; roadAuthority?: string; highwayTag?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const [roadAuthority, setRoadAuthority] = useState(initialRoadAuthority);
+  const [highwayTag, setHighwayTag] = useState(initialHighwayTag);
 
   const coords = decode(encodedPath).map(([lat, lng]) => [lat, lng] as [number, number]);
 
@@ -1122,13 +1135,48 @@ function MiniMap({ encodedPath, severity }: { encodedPath: string; severity: str
     };
   }, [encodedPath]);
 
+  // Fetch classification if missing, then persist it
+  useEffect(() => {
+    if (roadAuthority || !coords.length) return;
+    let cancelled = false;
+    const [lat, lng] = coords[0];
+    fetchWithAppCheck(`/api/road-classification?lat=${lat}&lng=${lng}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (cancelled || !data) return;
+        setRoadAuthority(data.roadAuthority);
+        setHighwayTag(data.highwayTag);
+        updateDoc(doc(db, "potholes", reportId), data).catch(() => {});
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [reportId, roadAuthority]);
+
   if (!coords.length) return null;
 
+  const authority = highwayTag ? getRoadAuthority(highwayTag) : null;
+  const authorityLabel = roadAuthority === "ward" ? "Ward Member" : roadAuthority === "lsgd" ? "Panchayat / LSGD" : roadAuthority === "pwd" ? "MLA / State PWD" : roadAuthority === "national" ? "MP / NHAI" : null;
+
   return (
-    <div
-      ref={containerRef}
-      style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)", overflow: "hidden" }}
-    />
+    <div className="relative" style={{ height: 160 }}>
+      <div
+        ref={containerRef}
+        style={{ height: 160, borderRadius: "0.375rem", border: "1px solid rgba(0,255,255,0.2)", overflow: "hidden" }}
+      />
+      <div className="absolute top-2 left-2 z-[1000]">
+        {authority && authorityLabel ? (
+          <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-2 py-1 rounded" style={{ border: `1px solid ${authority.color}40` }}>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: authority.color }} />
+            <span className="text-[9px] uppercase font-bold tracking-wide" style={{ color: authority.color }}>{authority.label}</span>
+            <span className="text-[9px] text-white/50">→ {authorityLabel}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-2 py-1 rounded border border-cyan-500/20 overflow-hidden" style={{ width: 160 }}>
+            <div className="h-3 rounded w-full bg-gradient-to-r from-cyan-900/40 via-cyan-500/20 to-cyan-900/40" style={{ backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1295,7 +1343,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         <div className="px-4 py-3 flex flex-col gap-3">
           {/* Mini map */}
           {report.encodedPath && (
-            <MiniMap encodedPath={report.encodedPath} severity={report.severity || "low"} />
+            <MiniMap reportId={report.id} encodedPath={report.encodedPath} severity={report.severity || "low"} roadAuthority={report.roadAuthority} highwayTag={report.highwayTag} />
           )}
 
           {/* Severity + Status + Score */}
@@ -1667,6 +1715,33 @@ function ReportingOverlay({
   );
 }
 
+const ROAD_AUTHORITY_MAP: Record<string, { label: string; authority: string; color: string }> = {
+  motorway: { label: "National Highway", authority: "national", color: "#f59e0b" },
+  motorway_link: { label: "National Highway", authority: "national", color: "#f59e0b" },
+  trunk: { label: "State Highway", authority: "national", color: "#f59e0b" },
+  trunk_link: { label: "State Highway", authority: "national", color: "#f59e0b" },
+  primary: { label: "State Highway", authority: "national", color: "#f59e0b" },
+  primary_link: { label: "State Highway", authority: "national", color: "#f59e0b" },
+  secondary: { label: "State PWD Road", authority: "pwd", color: "#f97316" },
+  secondary_link: { label: "State PWD Road", authority: "pwd", color: "#f97316" },
+  tertiary: { label: "Panchayat Road", authority: "lsgd", color: "#a78bfa" },
+  tertiary_link: { label: "Panchayat Road", authority: "lsgd", color: "#a78bfa" },
+};
+
+function getRoadAuthority(highwayTag: string) {
+  return ROAD_AUTHORITY_MAP[highwayTag] ?? { label: "Local Road", authority: "ward", color: "#34d399" };
+}
+
+async function fetchRoadClassification(lat: number, lng: number): Promise<{ highwayTag: string; roadAuthority: string } | null> {
+  try {
+    const res = await fetchWithAppCheck(`/api/road-classification?lat=${lat}&lng=${lng}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 function SubmitRouteForm({
   currentPathEncoded,
   origin,
@@ -1768,7 +1843,10 @@ function SubmitRouteForm({
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
-      const constituency = await getConstituency(origin.lat, origin.lng);
+      const [constituency, roadInfo] = await Promise.all([
+        getConstituency(origin.lat, origin.lng),
+        fetchRoadClassification(origin.lat, origin.lng),
+      ]);
 
       const payload: any = {
         userId: user.uid,
@@ -1791,6 +1869,10 @@ function SubmitRouteForm({
         if (constituency.lsgd) payload.lsgd = constituency.lsgd;
         if (constituency.lsgdType) payload.lsgdType = constituency.lsgdType;
         if (constituency.lsgdLabel) payload.lsgdLabel = constituency.lsgdLabel;
+      }
+      if (roadInfo) {
+        payload.highwayTag = roadInfo.highwayTag;
+        payload.roadAuthority = roadInfo.roadAuthority;
       }
 
       await addDoc(collection(db, "potholes"), payload);
