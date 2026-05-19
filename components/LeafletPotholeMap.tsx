@@ -1415,25 +1415,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                 <div className="text-cyan-300 font-bold">{report.district}</div>
               </div>
             )}
-            {ac?.lsgdLabel && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Local Body</div>
-                <div className="text-orange-400 font-bold">{ac.lsgdLabel}</div>
-                {ac.lsgdType && <div className="text-cyan-500/50 text-[9px]">{ac.lsgdType}</div>}
-              </div>
-            )}
-            {ac?.acName && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Constituency</div>
-                <div className="text-orange-400 font-bold">{ac.acName} (#{ac.acNo})</div>
-              </div>
-            )}
-            {ac?.pcName && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Parliament</div>
-                <div className="text-orange-400 font-bold">{ac.pcName}</div>
-              </div>
-            )}
+
             <div>
               <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Upvotes</div>
               <div className="text-cyan-300 font-bold">{upvoters.length}</div>
