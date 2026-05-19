@@ -117,6 +117,24 @@ export default function LeafletPotholeMap() {
 
   useEffect(() => { initClarity(); }, []);
 
+  // Keep --app-height in sync with the actual visible viewport (excludes Chrome URL bar,
+  // keyboard, and any other browser chrome). Falls back to window.innerHeight.
+  useEffect(() => {
+    const update = () => {
+      const h = window.visualViewport?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${h}px`);
+    };
+    update();
+    window.visualViewport?.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, []);
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -162,7 +180,7 @@ export default function LeafletPotholeMap() {
   };
 
   return (
-    <div className="relative w-full h-dvh-screen bg-neutral-900 overflow-hidden">
+    <div className="relative w-full h-app bg-neutral-900 overflow-hidden">
       <MapContainer
         center={[10.8505, 76.2711]}
         zoom={7}
@@ -253,7 +271,7 @@ function ReportsMarquee({ reports }: { reports: any[] }) {
   );
 
   return (
-    <div className="absolute bottom-0 left-0 w-full bg-black/90 border-t border-cyan-500/50 pt-2.5 z-[2000] overflow-hidden font-mono flex pointer-events-none" style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}>
+    <div className="absolute bottom-0 left-0 w-full bg-black/90 border-t border-cyan-500/50 pt-2.5 z-[2000] overflow-hidden font-mono flex pointer-events-none" style={{ paddingBottom: "max(0.625rem, var(--sab))" }}>
       <div className="flex animate-marquee shrink-0 items-center justify-around min-w-full">
         {latestReports.map((report) => (
           <MarqueeItem key={`mq1-${report.id}`} report={report} />
@@ -1405,7 +1423,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
           </div>
         </div>
 
-        <div style={{ height: "max(0.75rem, env(safe-area-inset-bottom))" }} />
+        <div style={{ height: "max(0.75rem, var(--sab))" }} />
       </div>
     </>
   );
@@ -1461,7 +1479,7 @@ function ReportingOverlay({
       <>
         <div
           ref={overlayRef}
-          className="absolute z-[1000] left-4 right-4 md:right-auto md:w-80 flex flex-col gap-3 font-mono pointer-events-none" style={{ top: "max(1rem, env(safe-area-inset-top, 0px))" }}
+          className="absolute z-[1000] left-4 right-4 md:right-auto md:w-80 flex flex-col gap-3 font-mono pointer-events-none" style={{ top: "max(1rem, var(--sat))" }}
           onMouseEnter={() => setIsDesktopHovered(true)}
           onMouseLeave={() => setIsDesktopHovered(false)}
         >
@@ -1629,7 +1647,7 @@ function ReportingOverlay({
   }
 
   return (
-    <div ref={overlayRef} className="absolute z-[9999] left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-max md:max-w-[90vw] flex flex-col items-center flex-nowrap font-mono" style={{ top: "max(1rem, env(safe-area-inset-top, 0px))" }}>
+    <div ref={overlayRef} className="absolute z-[9999] left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-max md:max-w-[90vw] flex flex-col items-center flex-nowrap font-mono" style={{ top: "max(1rem, var(--sat))" }}>
       <div className="bg-black/90 border border-cyan-500/60 w-full px-4 md:px-6 py-5 shadow-[0_0_25px_rgba(0,255,255,0.2)] backdrop-blur-md flex flex-col items-center text-center relative pointer-events-auto max-h-[80vh] overflow-y-auto">
         <div className="absolute bottom-0 left-0 w-full h-[2px] bg-cyan-500 shadow-[0_0_10px_rgba(0,255,255,1)]"></div>
 
@@ -2029,7 +2047,7 @@ function MapSearch() {
   };
 
   return (
-    <div className="absolute z-[1000] bottom-[calc(4.5rem_+_env(safe-area-inset-bottom,0px))] left-4 right-4 md:bottom-auto md:top-[max(1rem,env(safe-area-inset-top,0px))] md:left-auto md:w-64 flex flex-col pointer-events-none">
+    <div className="absolute z-[1000] bottom-[calc(4.5rem_+_var(--sab))] left-4 right-4 md:bottom-auto md:top-[max(1rem,var(--sat))] md:left-auto md:w-64 flex flex-col pointer-events-none">
       <div className="relative pointer-events-auto shadow-[0_0_15px_rgba(0,0,0,0.5)]">
         <input
           type="text"

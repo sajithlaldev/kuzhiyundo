@@ -1,10 +1,22 @@
 @import "tailwindcss";
 
-/* dvh (dynamic viewport height) fills the actual visible area on Chrome/Android,
-   excluding the URL bar. 100vh fallback for browsers that don't support dvh yet. */
-.h-dvh-screen {
+/* Safe-area and viewport custom properties.
+   --sat / --sab: resolved once from env() so all elements share the same value.
+   --app-height: overridden by JS via window.visualViewport for pixel-perfect sizing. */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --app-height: 100dvh;
+}
+
+/* Three-layer height fallback:
+   1. 100vh   — oldest browsers
+   2. 100dvh  — modern CSS (excludes Chrome/Android URL bar)
+   3. var(--app-height) — JS sets this to visualViewport.height for pixel-perfect sizing */
+.h-app {
   height: 100vh;
   height: 100dvh;
+  height: var(--app-height);
 }
 
 @theme {
