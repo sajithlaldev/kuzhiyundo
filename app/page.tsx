@@ -1,15 +1,11 @@
-import dynamic from "next/dynamic";
-
-const MapComponent = dynamic(() => import("@/components/LeafletPotholeMap"), {
-  ssr: false,
-});
+import MapLoader from "@/components/MapLoader";
 
 export default function Home() {
   return (
     <main>
       {/* Full-screen interactive map */}
       <div className="h-screen w-screen">
-        <MapComponent />
+        <MapLoader />
       </div>
 
       {/* Server-rendered content for SEO — visible on scroll */}
