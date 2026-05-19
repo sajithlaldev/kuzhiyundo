@@ -1234,11 +1234,17 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   const color = getColor(report.severity);
 
   const shareUrl = `https://kuzhiyundo.com?id=${report.id}`;
+  const reporterLine = report.userName && report.notes
+    ? `${report.userName} says: "${report.notes}"`
+    : report.userName
+      ? `Reported by ${report.userName}`
+      : report.notes
+        ? `"${report.notes}"`
+        : null;
   const shareText = [
     `🚧 Pothole reported in ${report.address || "Unknown Location"}`,
     `Severity: ${(report.severity || "low").toUpperCase()} | Score: ${upvoters.length - downvoters.length > 0 ? "+" : ""}${upvoters.length - downvoters.length}`,
-    report.userName ? `Reported by: ${report.userName}` : null,
-    report.notes ? `Notes: "${report.notes}"` : null,
+    reporterLine,
     `Reported on Kuzhiyundo`,
   ].filter(Boolean).join("\n");
 
