@@ -12,7 +12,7 @@ service cloud.firestore {
 
     function isValidPotholeReport(data) {
       return data.keys().hasAll(["userId", "encodedPath", "createdAt", "status", "severity"])
-        && data.keys().size() >= 5 && data.keys().size() <= 18
+        && data.keys().size() >= 5 && data.keys().size() <= 20
         && data.userId is string && data.userId.size() > 0 && data.userId == request.auth.uid
         && data.encodedPath is string && data.encodedPath.size() <= 100000
         && data.status in ["reported", "confirmed", "fixed"]
@@ -29,7 +29,18 @@ service cloud.firestore {
         && (!("pcName" in data) || (data.pcName is string && data.pcName.size() <= 200))
         && (!("lsgd" in data) || (data.lsgd is string && data.lsgd.size() <= 200))
         && (!("lsgdType" in data) || (data.lsgdType is string && data.lsgdType.size() <= 100))
-        && (!("lsgdLabel" in data) || (data.lsgdLabel is string && data.lsgdLabel.size() <= 200));
+        && (!("lsgdLabel" in data) || (data.lsgdLabel is string && data.lsgdLabel.size() <= 200))
+        && (!("highwayTag" in data) || (data.highwayTag is string && data.highwayTag.size() <= 100))
+        && (!("roadAuthority" in data) || (data.roadAuthority is string && data.roadAuthority.size() <= 50));
+    }
+
+    function isSafeRoadEnrich() {
+      let keys = incoming().diff(existing()).affectedKeys();
+      return keys.hasOnly(['highwayTag', 'roadAuthority'])
+        && !('highwayTag' in existing())
+        && !('roadAuthority' in existing())
+        && incoming().highwayTag is string && incoming().highwayTag.size() <= 100
+        && incoming().roadAuthority is string && incoming().roadAuthority.size() <= 50;
     }
 
     function isSafeVote() {
@@ -62,6 +73,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(potholeId) && isValidPotholeReport(incoming()) && incoming().createdAt == request.time;
       allow update: if isSignedIn() && (
         isSafeVote() ||
+        isSafeRoadEnrich() ||
         (isValidPotholeReport(incoming()) && incoming().createdAt == existing().createdAt && existing().userId == incoming().userId && existing().userId == request.auth.uid)
       );
       allow delete: if isSignedIn() && existing().userId == request.auth.uid;
