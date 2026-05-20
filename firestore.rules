@@ -12,7 +12,7 @@ service cloud.firestore {
 
     function isValidPotholeReport(data) {
       return data.keys().hasAll(["userId", "encodedPath", "createdAt", "status", "severity"])
-        && data.keys().size() >= 5 && data.keys().size() <= 20
+        && data.keys().size() >= 5 && data.keys().size() <= 25
         && data.userId is string && data.userId.size() > 0 && data.userId == request.auth.uid
         && data.encodedPath is string && data.encodedPath.size() <= 100000
         && data.status in ["reported", "confirmed", "fixed"]
@@ -31,7 +31,9 @@ service cloud.firestore {
         && (!("lsgdType" in data) || (data.lsgdType is string && data.lsgdType.size() <= 100))
         && (!("lsgdLabel" in data) || (data.lsgdLabel is string && data.lsgdLabel.size() <= 200))
         && (!("highwayTag" in data) || (data.highwayTag is string && data.highwayTag.size() <= 100))
-        && (!("roadAuthority" in data) || (data.roadAuthority is string && data.roadAuthority.size() <= 50));
+        && (!("roadAuthority" in data) || (data.roadAuthority is string && data.roadAuthority.size() <= 50))
+        && (!("wardNo" in data) || data.wardNo is int || (data.wardNo is string && data.wardNo.size() <= 20))
+        && (!("wardName" in data) || (data.wardName is string && data.wardName.size() <= 200));
     }
 
     function isSafeRoadEnrich() {
@@ -41,6 +43,14 @@ service cloud.firestore {
         && !('roadAuthority' in existing())
         && incoming().highwayTag is string && incoming().highwayTag.size() <= 100
         && incoming().roadAuthority is string && incoming().roadAuthority.size() <= 50;
+    }
+
+    function isSafeWardEnrich() {
+      let keys = incoming().diff(existing()).affectedKeys();
+      return keys.hasOnly(['wardNo', 'wardName'])
+        && existing().get('wardNo', null) == null
+        && (incoming().get('wardNo', null) is int || (incoming().get('wardNo', null) is string && incoming().wardNo.size() <= 20))
+        && (!('wardName' in keys) || (incoming().wardName is string && incoming().wardName.size() <= 200));
     }
 
     function isSafeVote() {
@@ -74,6 +84,7 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         isSafeVote() ||
         isSafeRoadEnrich() ||
+        isSafeWardEnrich() ||
         (isValidPotholeReport(incoming()) && incoming().createdAt == existing().createdAt && existing().userId == incoming().userId && existing().userId == request.auth.uid)
       );
       allow delete: if isSignedIn() && existing().userId == request.auth.uid;

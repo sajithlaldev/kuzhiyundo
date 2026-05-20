@@ -1187,7 +1187,9 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   const [ac, setAc] = useState(initialAc ?? null);
 
   useEffect(() => {
-    if (ac) return;
+    const needsAc = !ac;
+    const needsWard = report.wardNo == null;
+    if (!needsAc && !needsWard) return;
     if (!report.encodedPath) return;
     (async () => {
       try {
@@ -1196,7 +1198,15 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         if (!path.length) return;
         const [lat, lng] = path[0];
         const info = await getConstituency(lat, lng);
-        if (info) setAc(info);
+        if (info) {
+          if (needsAc) setAc(info);
+          if (needsWard && info.wardNo != null && user) {
+            updateDoc(doc(db, "potholes", report.id), {
+              wardNo: info.wardNo,
+              ...(info.wardName ? { wardName: info.wardName } : {}),
+            }).catch(() => { });
+          }
+        }
       } catch { }
     })();
   }, [report.encodedPath]);
@@ -1389,6 +1399,14 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               <div>
                 <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
                 <div className="text-cyan-300 font-bold">{report.district}</div>
+              </div>
+            )}
+            {(report.wardNo != null || ac?.wardNo != null) && (
+              <div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward</div>
+                <div className="text-cyan-300 font-bold">
+                  {report.wardName ?? ac?.wardName ?? "Ward"} #{report.wardNo ?? ac?.wardNo}
+                </div>
               </div>
             )}
           </div>
@@ -1851,6 +1869,8 @@ function SubmitRouteForm({
         if (constituency.lsgd) payload.lsgd = constituency.lsgd;
         if (constituency.lsgdType) payload.lsgdType = constituency.lsgdType;
         if (constituency.lsgdLabel) payload.lsgdLabel = constituency.lsgdLabel;
+        if (constituency.wardNo != null) payload.wardNo = constituency.wardNo;
+        if (constituency.wardName) payload.wardName = constituency.wardName;
       }
       if (roadInfo) {
         payload.highwayTag = roadInfo.highwayTag;
