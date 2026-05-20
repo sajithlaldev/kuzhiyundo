@@ -1391,15 +1391,6 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                 <div className="text-cyan-300 font-bold">{report.district}</div>
               </div>
             )}
-
-            <div>
-              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Upvotes</div>
-              <div className="text-cyan-300 font-bold">{upvoters.length}</div>
-            </div>
-            <div>
-              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Downvotes</div>
-              <div className="text-cyan-300 font-bold">{downvoters.length}</div>
-            </div>
           </div>
 
           {/* Notes */}
