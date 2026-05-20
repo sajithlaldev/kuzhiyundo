@@ -9,6 +9,8 @@ export interface ConstituencyInfo {
   lsgdType?: string;
   lsgdLabel?: string;
   lsgCode?: string;
+  wardNo?: string | number;
+  wardName?: string;
 }
 
 export async function getConstituency(

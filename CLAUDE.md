@@ -50,6 +50,7 @@ Both routes enforce Firebase App Check via `verifyAppCheckToken()` in `lib/appch
 | `district`, `pincode` | string | From Nominatim |
 | `acName`, `acNo`, `pcName` | string/number | From `/api/constituency` |
 | `lsgd`, `lsgdType`, `lsgdLabel`, `lsgCode` | string | LSGD info |
+| `wardNo`, `wardName` | string/number | From `/api/constituency` via FlatGeobuf ward lookup |
 | `upvoterIds`, `downvoterIds` | string[] | UIDs |
 | `notes`, `imageUrl` | string | Optional |
 
