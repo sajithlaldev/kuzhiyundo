@@ -1624,6 +1624,12 @@ function ReportingOverlay({
           >
             <div className="overflow-hidden flex flex-col">
               <div className="flex flex-col gap-2 md:gap-3">
+                <button
+                  onClick={() => document.getElementById("seo-content")?.scrollIntoView({ behavior: "smooth" })}
+                  className="bg-black/50 hover:bg-cyan-500/10 text-cyan-500 hover:text-cyan-300 py-1.5 md:py-2 px-4 transition-all border border-cyan-500/30 hover:border-cyan-400/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
+                >
+                  <ExternalLink className="w-3 h-3" /> About
+                </button>
                 <a
                   href="https://github.com/sajithlaldev/kuzhiyundo/issues/new"
                   target="_blank"

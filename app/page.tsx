@@ -1,5 +1,4 @@
 import MapLoader from "@/components/MapLoader";
-import ScrollToContent from "@/components/ScrollToContent";
 
 export default function Home() {
   return (
@@ -7,7 +6,6 @@ export default function Home() {
       {/* Full-screen interactive map */}
       <div className="h-screen w-screen">
         <MapLoader />
-        <ScrollToContent />
       </div>
 
       {/* Server-rendered content for SEO — visible on scroll */}
