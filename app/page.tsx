@@ -1,4 +1,5 @@
 import MapLoader from "@/components/MapLoader";
+import ScrollToContent from "@/components/ScrollToContent";
 
 export default function Home() {
   return (
@@ -6,10 +7,11 @@ export default function Home() {
       {/* Full-screen interactive map */}
       <div className="h-screen w-screen">
         <MapLoader />
+        <ScrollToContent />
       </div>
 
       {/* Server-rendered content for SEO — visible on scroll */}
-      <section className="bg-black text-white font-mono px-6 py-16 max-w-3xl mx-auto">
+      <section id="seo-content" className="bg-black text-white font-mono px-6 py-16 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-cyan-400 mb-4">
           Kuzhiyundo — Community Pothole Tracker for Kerala
         </h1>
