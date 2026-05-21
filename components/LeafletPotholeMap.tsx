@@ -1982,9 +1982,11 @@ function SubmitRouteForm({
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
+      const path = decode(currentPathEncoded) as [number, number][];
+      const mid = path[Math.floor(path.length / 2)];
       const [constituency, roadInfo] = await Promise.all([
         getConstituency(origin.lat, origin.lng),
-        fetchRoadClassification(origin.lat, origin.lng),
+        fetchRoadClassification(mid[0], mid[1]),
       ]);
 
       const payload: any = {

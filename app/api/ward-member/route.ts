@@ -6,7 +6,7 @@ const MEMBERS_URL =
 
 // Re-indexed by "secLsgCode|wardNo" (wardNo zero-padded to 3 digits)
 let _index: Record<string, any> | null = null;
-
+export const runtime = 'edge';
 async function getIndex() {
   if (_index) return _index;
   const res = await fetch(MEMBERS_URL);
