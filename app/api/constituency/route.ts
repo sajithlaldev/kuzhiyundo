@@ -4,32 +4,33 @@ import { point } from "@turf/helpers";
 import { geojson as fgb } from "flatgeobuf";
 import { verifyAppCheckToken } from "@/lib/appcheck-verify";
 export const runtime = "edge";
+
 const AC_URL =
   "https://raw.githubusercontent.com/opendatakerala/kerala-assembly-map/main/KLA_2026_Review/KLA_AC_2026_V2.geojson";
-const LSGI_URL =
-  "https://raw.githubusercontent.com/opendatakerala/kerala-assembly-map/main/KLA_2026_Review/LSGI_2025.geojson";
 const WARDS_FGB_URL =
   "https://github.com/sajithlaldev/kuzhiyundo/releases/download/v1.2-wards/KL_Wards_indexed.fgb";
 
 let _acFeatures: any[] | null = null;
-let _lsgiFeatures: any[] | null = null;
 
-async function getFeatures() {
-  if (!_acFeatures || !_lsgiFeatures) {
-    const [acRes, lsgiRes] = await Promise.all([
-      fetch(AC_URL),
-      fetch(LSGI_URL),
-    ]);
-    if (!acRes.ok) throw new Error("Failed to fetch AC GeoJSON");
-    if (!lsgiRes.ok) throw new Error("Failed to fetch LSGI GeoJSON");
-    const [acData, lsgiData] = await Promise.all([acRes.json(), lsgiRes.json()]);
-    _acFeatures = acData.features;
-    _lsgiFeatures = lsgiData.features;
+async function getAcFeatures() {
+  if (!_acFeatures) {
+    const res = await fetch(AC_URL);
+    if (!res.ok) throw new Error("Failed to fetch AC GeoJSON");
+    const data = await res.json();
+    _acFeatures = data.features;
   }
-  return { acFeatures: _acFeatures!, lsgiFeatures: _lsgiFeatures! };
+  return _acFeatures!;
 }
 
-async function getWard(lat: number, lng: number): Promise<{ wardNo: string | number | null; wardName: string | null }> {
+async function getWard(lat: number, lng: number): Promise<{
+  wardNo: string | number | null;
+  wardName: string | null;
+  lsgd: string | null;
+  lsgdType: string | null;
+  lsgdLabel: string | null;
+  lsgCode: string | null;
+  secLsgCode: string | null;
+} | null> {
   const pad = 0.01;
   const rect = { minX: lng - pad, minY: lat - pad, maxX: lng + pad, maxY: lat + pad };
   const pt = point([lng, lat]);
@@ -38,13 +39,21 @@ async function getWard(lat: number, lng: number): Promise<{ wardNo: string | num
     for await (const feature of fgb.deserialize(WARDS_FGB_URL, rect) as AsyncIterable<any>) {
       if (booleanPointInPolygon(pt, feature)) {
         const p = feature.properties;
-        return { wardNo: p.Ward_No, wardName: p.Ward_Name };
+        return {
+          wardNo: p.Ward_No,
+          wardName: p.Ward_Name,
+          lsgd: p.LSGD ?? null,
+          lsgdType: p.Lsgd_Type ?? null,
+          lsgdLabel: p.Lsgd_Label ?? null,
+          lsgCode: p.Lsg_Code ?? null,
+          secLsgCode: p.Sec_Lsg_Code ?? null,
+        };
       }
     }
   } catch {
     // ward lookup is best-effort — don't fail the whole request
   }
-  return { wardNo: null, wardName: null };
+  return null;
 }
 
 export async function GET(req: NextRequest) {
@@ -61,8 +70,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [{ acFeatures, lsgiFeatures }, wardResult] = await Promise.all([
-      getFeatures(),
+    const [acFeatures, wardResult] = await Promise.all([
+      getAcFeatures(),
       getWard(lat, lng),
     ]);
     const pt = point([lng, lat]);
@@ -81,25 +90,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    let lsgiResult: any = null;
-    for (const feature of lsgiFeatures) {
-      if (booleanPointInPolygon(pt, feature)) {
-        const p = feature.properties;
-        lsgiResult = {
-          lsgd: p.LSGD,
-          lsgdType: p.Lsgd_Type,
-          lsgdLabel: p["English Label"],
-          lsgCode: p.LSG_code,
-          secLsgCode: p.SEC_Kerala_code ?? null,
-        };
-        break;
-      }
-    }
-
-    if (!acResult && !lsgiResult) return NextResponse.json(null);
+    if (!acResult && !wardResult) return NextResponse.json(null);
 
     return NextResponse.json(
-      { ...acResult, ...lsgiResult, ...wardResult },
+      { ...acResult, ...wardResult },
       { headers: { "Cache-Control": "public, max-age=86400" } },
     );
   } catch (e) {
