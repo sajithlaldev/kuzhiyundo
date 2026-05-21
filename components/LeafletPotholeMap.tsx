@@ -112,6 +112,7 @@ export default function LeafletPotholeMap() {
     null,
   );
   const [pointsConfirmed, setPointsConfirmed] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   useEffect(() => { initClarity(); }, []);
 
@@ -196,7 +197,7 @@ export default function LeafletPotholeMap() {
           origin={origin}
           destination={destination}
           pointsConfirmed={pointsConfirmed}
-          setOrigin={(pos) => { setOrigin(pos); setDestination(null); setCurrentPathEncoded(null); setPointsConfirmed(false); }}
+          setOrigin={(pos) => { setOrigin(pos); setDestination(null); setCurrentPathEncoded(null); setPointsConfirmed(false); setRouteError(null); }}
           setDestination={setDestination}
         />
 
@@ -209,7 +210,8 @@ export default function LeafletPotholeMap() {
             origin={origin}
             destination={destination}
             severity={reportingSeverity}
-            onRouteFound={(encodedPath) => setCurrentPathEncoded(encodedPath)}
+            onRouteFound={(encodedPath) => { setCurrentPathEncoded(encodedPath); setRouteError(null); }}
+            onError={(msg) => { setRouteError(msg); setCurrentPathEncoded(null); }}
           />
         )}
 
@@ -230,6 +232,7 @@ export default function LeafletPotholeMap() {
           pointsConfirmed={pointsConfirmed}
           onConfirmPoints={() => setPointsConfirmed(true)}
           currentPathEncoded={currentPathEncoded}
+          routeError={routeError}
           severity={reportingSeverity}
           setSeverity={setReportingSeverity}
           onCancel={cancelReporting}
@@ -318,15 +321,19 @@ function MapEventsHandler({
   return null;
 }
 
+const MAX_ROUTE_METERS = 1000;
+
 function RouteDisplay({
   origin,
   destination,
   onRouteFound,
+  onError,
   severity,
 }: {
   origin: { lat: number; lng: number };
   destination: { lat: number; lng: number };
   onRouteFound: (encoded: string) => void;
+  onError: (msg: string) => void;
   severity: "low" | "medium" | "high";
 }) {
   const map = useMap();
@@ -341,7 +348,13 @@ function RouteDisplay({
         const data = await response.json();
 
         if (data.routes && data.routes.length > 0) {
-          const encoded = data.routes[0].geometry;
+          const route = data.routes[0];
+          if (route.distance > MAX_ROUTE_METERS) {
+            const km = (route.distance / 1000).toFixed(1);
+            onError(`Route is ${km} km — max allowed is 1 km. Pick closer points.`);
+            return;
+          }
+          const encoded = route.geometry;
           const decoded = decode(encoded).map(
             ([lat, lng]) => [lat, lng] as [number, number],
           );
@@ -1185,6 +1198,28 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
 
 function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
+  const [wardMember, setWardMember] = useState<{ memberName: string; party: string | null; front: string | null } | null>(null);
+  const wardMemberFetched = useRef(false);
+
+  // Fetch ward member once we have all required fields
+  useEffect(() => {
+    if (wardMemberFetched.current) return;
+    // Prefer AC GeoJSON district (ac?.district) — it matches DISTRICT_CODES exactly.
+    // report.district comes from Nominatim and may have different formatting.
+    const district = ac?.district ?? report.district;
+    const lsgdType = report.lsgdType ?? ac?.lsgdType;
+    const lsgd = report.lsgd ?? ac?.lsgd;
+    const wardNo = report.wardNo ?? ac?.wardNo;
+    if (!district || !lsgdType || !lsgd || wardNo == null) return;
+    wardMemberFetched.current = true;
+    const params = new URLSearchParams({
+      district, lsgdType, lsgd, wardNo: String(wardNo),
+    });
+    fetchWithAppCheck(`/api/ward-member?${params}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.memberName) setWardMember(data); })
+      .catch(() => { });
+  }, [ac, report.district, report.lsgdType, report.lsgd, report.wardNo]);
 
   useEffect(() => {
     const needsAc = !ac;
@@ -1409,6 +1444,17 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                 </div>
               </div>
             )}
+            {wardMember && (
+              <div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward Member</div>
+                <div className="text-cyan-300 font-bold">{wardMember.memberName}</div>
+                {(wardMember.party || wardMember.front) && (
+                  <div className="text-cyan-400/60 text-[10px] mt-0.5">
+                    {[wardMember.party, wardMember.front].filter(Boolean).join(" · ")}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Notes */}
@@ -1452,6 +1498,7 @@ function ReportingOverlay({
   pointsConfirmed,
   onConfirmPoints,
   currentPathEncoded,
+  routeError,
   severity,
   setSeverity,
   onCancel,
@@ -1688,12 +1735,19 @@ function ReportingOverlay({
             <Navigation className="w-6 h-6 text-cyan-400 mb-3" />
             <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Points Selected</h3>
             <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest mb-4">&gt; tap map to reselect start point</p>
-            <button
-              onClick={onConfirmPoints}
-              className="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-[11px] uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(0,255,255,0.4)]"
-            >
-              Confirm Points
-            </button>
+            {routeError ? (
+              <div className="w-full py-2 px-3 bg-red-500/10 border border-red-500/40 text-red-400 text-[10px] uppercase tracking-widest text-center leading-relaxed">
+                {routeError}
+              </div>
+            ) : (
+              <button
+                onClick={onConfirmPoints}
+                disabled={!currentPathEncoded}
+                className="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-900 disabled:text-cyan-600 text-black font-bold text-[11px] uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(0,255,255,0.4)] disabled:shadow-none"
+              >
+                {currentPathEncoded ? "Confirm Points" : "Calculating route…"}
+              </button>
+            )}
           </>
         ) : (
           <SubmitRouteForm
