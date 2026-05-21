@@ -1,7 +1,11 @@
 /**
  * Scrapes all Kerala ward boundaries from wardmap.ksmart.live and writes KL_Wards.fgb.
- * Run once: node scripts/scrape-wards.mjs
- * Output: scripts/KL_Wards.fgb  (host this on Firebase Storage / CDN and update WARDS_FGB_URL)
+ * NOTE: This produces an UN-INDEXED FGB (flatgeobuf JS serialize always sets indexNodeSize=0).
+ *       The API route requires an INDEXED FGB for bbox queries.
+ *       Use scripts/scrape-wards.py instead, which uses fiona to produce KL_Wards_indexed.fgb.
+ *
+ * Run: node scripts/scrape-wards.mjs
+ * Output: scripts/KL_Wards.fgb
  */
 
 import { writeFileSync } from "fs";
