@@ -9,7 +9,7 @@ const AC_URL =
 const LSGI_URL =
   "https://raw.githubusercontent.com/opendatakerala/kerala-assembly-map/main/KLA_2026_Review/LSGI_2025.geojson";
 const WARDS_FGB_URL =
-  "https://github.com/Vonter/kerala-wards/releases/download/19-nov-2024/KL_Wards.fgb";
+  "https://github.com/sajithlaldev/kuzhiyundo/releases/download/v1.0-wards/KL_Wards.fgb";
 
 let _acFeatures: any[] | null = null;
 let _lsgiFeatures: any[] | null = null;
