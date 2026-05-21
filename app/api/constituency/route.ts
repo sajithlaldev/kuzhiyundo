@@ -90,6 +90,7 @@ export async function GET(req: NextRequest) {
           lsgdType: p.Lsgd_Type,
           lsgdLabel: p["English Label"],
           lsgCode: p.LSG_code,
+          secLsgCode: p.SEC_Kerala_code ?? null,
         };
         break;
       }

@@ -20,6 +20,7 @@ import { db, loginWithGoogle, logout } from "../lib/firebase";
 import { fetchWithAppCheck } from "../lib/appcheck-fetch";
 import { initClarity } from "../lib/clarity";
 import { getConstituency } from "../lib/constituency";
+import { getWardMember, type WardMember } from "../lib/ward-member";
 import { useAuthStore } from "../lib/store";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -1199,28 +1200,19 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
 
 function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
-  const [wardMember, setWardMember] = useState<{ memberName: string; party: string | null; front: string | null } | null>(null);
+  const [wardMember, setWardMember] = useState<WardMember | null>(null);
   const wardMemberFetched = useRef(false);
 
-  // Fetch ward member once we have all required fields
   useEffect(() => {
     if (wardMemberFetched.current) return;
-    // Prefer AC GeoJSON district (ac?.district) — it matches DISTRICT_CODES exactly.
-    // report.district comes from Nominatim and may have different formatting.
-    const district = ac?.district ?? report.district;
-    const lsgdType = report.lsgdType ?? ac?.lsgdType;
-    const lsgd = report.lsgd ?? ac?.lsgd;
+    const secLsgCode = report.secLsgCode ?? ac?.secLsgCode;
     const wardNo = report.wardNo ?? ac?.wardNo;
-    if (!district || !lsgdType || !lsgd || wardNo == null) return;
+    if (!secLsgCode || wardNo == null) return;
     wardMemberFetched.current = true;
-    const params = new URLSearchParams({
-      district, lsgdType, lsgd, wardNo: String(wardNo),
-    });
-    fetchWithAppCheck(`/api/ward-member?${params}`)
-      .then(r => r.ok ? r.json() : null)
+    getWardMember(secLsgCode, wardNo)
       .then(data => { if (data?.memberName) setWardMember(data); })
       .catch(() => { });
-  }, [ac, report.district, report.lsgdType, report.lsgd, report.wardNo]);
+  }, [ac, report.secLsgCode, report.wardNo]);
 
   useEffect(() => {
     const needsAc = !ac;
@@ -1446,14 +1438,25 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               </div>
             )}
             {wardMember && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward Member</div>
-                <div className="text-cyan-300 font-bold">{wardMember.memberName}</div>
-                {(wardMember.party || wardMember.front) && (
-                  <div className="text-cyan-400/60 text-[10px] mt-0.5">
-                    {[wardMember.party, wardMember.front].filter(Boolean).join(" · ")}
+              <div className="col-span-2">
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-1">Ward Member</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-cyan-300 font-bold">{wardMember.memberName}</div>
+                    {wardMember.party && (
+                      <div className="text-cyan-400/60 text-[10px] mt-0.5">{wardMember.party}</div>
+                    )}
                   </div>
-                )}
+                  {wardMember.phone && (
+                    <a
+                      href={`tel:${wardMember.phone}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/40 text-green-400 text-[10px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors shrink-0"
+                    >
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>
+                      Call
+                    </a>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1930,6 +1933,7 @@ function SubmitRouteForm({
         if (constituency.lsgdLabel) payload.lsgdLabel = constituency.lsgdLabel;
         if (constituency.wardNo != null) payload.wardNo = constituency.wardNo;
         if (constituency.wardName) payload.wardName = constituency.wardName;
+        if (constituency.secLsgCode) payload.secLsgCode = constituency.secLsgCode;
       }
       if (roadInfo) {
         payload.highwayTag = roadInfo.highwayTag;

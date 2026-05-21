@@ -9,6 +9,7 @@ export interface ConstituencyInfo {
   lsgdType?: string;
   lsgdLabel?: string;
   lsgCode?: string;
+  secLsgCode?: string | null;
   wardNo?: string | number;
   wardName?: string;
 }

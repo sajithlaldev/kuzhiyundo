@@ -34,7 +34,8 @@ service cloud.firestore {
         && (!("roadAuthority" in data) || (data.roadAuthority is string && data.roadAuthority.size() <= 50))
         && (!("wardNo" in data) || data.wardNo is int || (data.wardNo is string && data.wardNo.size() <= 20))
         && (!("wardName" in data) || (data.wardName is string && data.wardName.size() <= 200))
-        && (!("distanceM" in data) || (data.distanceM is int && data.distanceM > 0 && data.distanceM <= 1000));
+        && (!("distanceM" in data) || (data.distanceM is int && data.distanceM > 0 && data.distanceM <= 1000))
+        && (!("secLsgCode" in data) || (data.secLsgCode is string && data.secLsgCode.size() <= 20));
     }
 
     function isSafeRoadEnrich() {
