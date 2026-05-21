@@ -1216,24 +1216,35 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   }, [ac, report.secLsgCode, report.wardNo]);
 
   useEffect(() => {
-    const needsAc = !ac;
-    const needsWard = report.wardNo == null;
-    if (!needsAc && !needsWard) return;
+    const missingConstituency = report.acNo == null || report.pcName == null;
+    const missingWard = report.wardNo == null || report.secLsgCode == null;
+    if (!missingConstituency && !missingWard && ac) return;
     if (!report.encodedPath) return;
     (async () => {
       try {
         const { decode } = await import("@googlemaps/polyline-codec");
         const path = decode(report.encodedPath);
         if (!path.length) return;
-        const [lat, lng] = path[0];
-        const info = await getConstituency(lat, lng);
+        const mid = path[Math.floor(path.length / 2)];
+        const info = await getConstituency(mid[0], mid[1]);
         if (info) {
-          if (needsAc) setAc(info);
-          if (needsWard && info.wardNo != null && user) {
-            updateDoc(doc(db, "potholes", report.id), {
-              wardNo: info.wardNo,
-              ...(info.wardName ? { wardName: info.wardName } : {}),
-            }).catch(() => { });
+          setAc(info);
+          const updates: Record<string, any> = {};
+          if (missingConstituency) {
+            updates.acNo = info.acNo;
+            updates.acName = info.acName;
+            updates.pcName = info.pcName;
+            if (info.lsgd) updates.lsgd = info.lsgd;
+            if (info.lsgdType) updates.lsgdType = info.lsgdType;
+            if (info.lsgdLabel) updates.lsgdLabel = info.lsgdLabel;
+          }
+          if (missingWard) {
+            if (info.wardNo != null) updates.wardNo = info.wardNo;
+            if (info.wardName) updates.wardName = info.wardName;
+            if (info.secLsgCode) updates.secLsgCode = info.secLsgCode;
+          }
+          if (Object.keys(updates).length) {
+            updateDoc(doc(db, "potholes", report.id), updates).catch(() => { });
           }
         }
       } catch { }

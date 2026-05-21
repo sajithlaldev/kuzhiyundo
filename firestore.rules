@@ -55,6 +55,22 @@ service cloud.firestore {
         && (!('wardName' in keys) || (incoming().wardName is string && incoming().wardName.size() <= 200));
     }
 
+    function isSafeLocationEnrich() {
+      let keys = incoming().diff(existing()).affectedKeys();
+      return keys.hasOnly(['acNo', 'acName', 'pcName', 'lsgd', 'lsgdType', 'lsgdLabel', 'wardNo', 'wardName', 'secLsgCode'])
+        && existing().get('acNo', null) == null
+        && keys.size() > 0
+        && (!('acNo' in keys) || incoming().acNo is int)
+        && (!('acName' in keys) || (incoming().acName is string && incoming().acName.size() <= 200))
+        && (!('pcName' in keys) || (incoming().pcName is string && incoming().pcName.size() <= 200))
+        && (!('lsgd' in keys) || (incoming().lsgd is string && incoming().lsgd.size() <= 200))
+        && (!('lsgdType' in keys) || (incoming().lsgdType is string && incoming().lsgdType.size() <= 100))
+        && (!('lsgdLabel' in keys) || (incoming().lsgdLabel is string && incoming().lsgdLabel.size() <= 200))
+        && (!('wardNo' in keys) || incoming().wardNo is int || (incoming().wardNo is string && incoming().wardNo.size() <= 20))
+        && (!('wardName' in keys) || (incoming().wardName is string && incoming().wardName.size() <= 200))
+        && (!('secLsgCode' in keys) || (incoming().secLsgCode is string && incoming().secLsgCode.size() <= 20));
+    }
+
     function isSafeVote() {
       let keys = incoming().diff(existing()).affectedKeys();
       let onlyVotes = keys.hasOnly(['upvoterIds', 'downvoterIds']);
@@ -87,6 +103,7 @@ service cloud.firestore {
         isSafeVote() ||
         isSafeRoadEnrich() ||
         isSafeWardEnrich() ||
+        isSafeLocationEnrich() ||
         (isValidPotholeReport(incoming()) && incoming().createdAt == existing().createdAt && existing().userId == incoming().userId && existing().userId == request.auth.uid)
       );
       allow delete: if isSignedIn() && existing().userId == request.auth.uid;
