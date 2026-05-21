@@ -51,6 +51,7 @@ Both routes enforce Firebase App Check via `verifyAppCheckToken()` in `lib/appch
 | `acName`, `acNo`, `pcName` | string/number | From `/api/constituency` |
 | `lsgd`, `lsgdType`, `lsgdLabel`, `lsgCode` | string | LSGD info |
 | `wardNo`, `wardName` | string/number | From `/api/constituency` via FlatGeobuf ward lookup |
+| `distanceM` | number | Route length in metres (rounded integer, from OSRM) |
 | `upvoterIds`, `downvoterIds` | string[] | UIDs |
 | `notes`, `imageUrl` | string | Optional |
 

@@ -108,9 +108,8 @@ export default function LeafletPotholeMap() {
     lat: number;
     lng: number;
   } | null>(null);
-  const [currentPathEncoded, setCurrentPathEncoded] = useState<string | null>(
-    null,
-  );
+  const [currentPathEncoded, setCurrentPathEncoded] = useState<string | null>(null);
+  const [currentRouteDistance, setCurrentRouteDistance] = useState<number | null>(null);
   const [pointsConfirmed, setPointsConfirmed] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
 
@@ -175,6 +174,7 @@ export default function LeafletPotholeMap() {
     setOrigin(null);
     setDestination(null);
     setCurrentPathEncoded(null);
+    setCurrentRouteDistance(null);
     setPointsConfirmed(false);
   };
 
@@ -197,7 +197,7 @@ export default function LeafletPotholeMap() {
           origin={origin}
           destination={destination}
           pointsConfirmed={pointsConfirmed}
-          setOrigin={(pos) => { setOrigin(pos); setDestination(null); setCurrentPathEncoded(null); setPointsConfirmed(false); setRouteError(null); }}
+          setOrigin={(pos) => { setOrigin(pos); setDestination(null); setCurrentPathEncoded(null); setCurrentRouteDistance(null); setPointsConfirmed(false); setRouteError(null); }}
           setDestination={setDestination}
         />
 
@@ -210,7 +210,7 @@ export default function LeafletPotholeMap() {
             origin={origin}
             destination={destination}
             severity={reportingSeverity}
-            onRouteFound={(encodedPath) => { setCurrentPathEncoded(encodedPath); setRouteError(null); }}
+            onRouteFound={(encodedPath, distanceM) => { setCurrentPathEncoded(encodedPath); setCurrentRouteDistance(distanceM); setRouteError(null); }}
             onError={(msg) => { setRouteError(msg); setCurrentPathEncoded(null); }}
           />
         )}
@@ -232,6 +232,7 @@ export default function LeafletPotholeMap() {
           pointsConfirmed={pointsConfirmed}
           onConfirmPoints={() => setPointsConfirmed(true)}
           currentPathEncoded={currentPathEncoded}
+          currentRouteDistance={currentRouteDistance}
           routeError={routeError}
           severity={reportingSeverity}
           setSeverity={setReportingSeverity}
@@ -332,7 +333,7 @@ function RouteDisplay({
 }: {
   origin: { lat: number; lng: number };
   destination: { lat: number; lng: number };
-  onRouteFound: (encoded: string) => void;
+  onRouteFound: (encoded: string, distanceM: number) => void;
   onError: (msg: string) => void;
   severity: "low" | "medium" | "high";
 }) {
@@ -359,7 +360,7 @@ function RouteDisplay({
             ([lat, lng]) => [lat, lng] as [number, number],
           );
           setRoutePath(decoded);
-          onRouteFound(encoded);
+          onRouteFound(encoded, route.distance);
 
           if (decoded.length > 0) {
             const bounds = L.latLngBounds(
@@ -1498,6 +1499,7 @@ function ReportingOverlay({
   pointsConfirmed,
   onConfirmPoints,
   currentPathEncoded,
+  currentRouteDistance,
   routeError,
   severity,
   setSeverity,
@@ -1752,6 +1754,7 @@ function ReportingOverlay({
         ) : (
           <SubmitRouteForm
             currentPathEncoded={currentPathEncoded}
+            currentRouteDistance={currentRouteDistance}
             origin={origin}
             severity={severity}
             setSeverity={setSeverity}
@@ -1798,6 +1801,7 @@ async function fetchRoadClassification(lat: number, lng: number): Promise<{ high
 
 function SubmitRouteForm({
   currentPathEncoded,
+  currentRouteDistance,
   origin,
   severity,
   setSeverity,
@@ -1911,6 +1915,7 @@ function SubmitRouteForm({
         severity,
         address,
         upvoterIds: [],
+        ...(currentRouteDistance != null ? { distanceM: Math.round(currentRouteDistance) } : {}),
       };
       if (district) payload.district = district;
       if (pincode) payload.pincode = pincode;
