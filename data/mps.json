@@ -1,0 +1,122 @@
+{
+  "Pathanamthitta": {
+    "name": "Anto Antony",
+    "party": "Indian National Congress",
+    "phone": "9447010000",
+    "email": "anto.antony@mpls.sansad.in"
+  },
+  "Malappuram": {
+    "name": "E T Mohammed Basheer",
+    "party": "Indian Union Muslim League",
+    "phone": "9447125278",
+    "email": "basheer.et@mpls.sansad.in"
+  },
+  "Chalakudy": {
+    "name": "Benny Behanan",
+    "party": "Indian National Congress",
+    "phone": "9846184400",
+    "email": "benny.behanan@mpls.sansad.in"
+  },
+  "Ernakulam": {
+    "name": "Hibi Eden",
+    "party": "Indian National Congress",
+    "phone": "9447147091",
+    "email": "hibi.eden@mpls.sansad.in"
+  },
+  "Kottayam": {
+    "name": "K. Francis George",
+    "party": "Kerala Congress",
+    "phone": "9446411100",
+    "email": "kfrancisgeorge@gmail.com"
+  },
+  "Thrissur": {
+    "name": "Suresh Gopi",
+    "party": "Bharatiya Janata Party",
+    "phone": "9539197777",
+    "email": "suresh.gopi@mpls.sansad.in"
+  },
+  "Idukki": {
+    "name": "Dean Kuriakose",
+    "party": "Indian National Congress",
+    "phone": "9447877369",
+    "email": "dean.kuriakose@mpls.sansad.in"
+  },
+  "Vatakara": {
+    "name": "Shafi Parambil",
+    "party": "Indian National Congress",
+    "phone": "9400000006",
+    "email": "shafi.parambil@mpls.sansad.in"
+  },
+  "Attingal": {
+    "name": "Adoor Prakash",
+    "party": "Indian National Congress",
+    "phone": "9447008166",
+    "email": "advadoor.prakash@mpls.sansad.in"
+  },
+  "Kollam": {
+    "name": "N K Premachandran",
+    "party": "Revolutionary Socialist Party",
+    "phone": "9400117700",
+    "email": "nk.premachandran@mpls.sansad.in"
+  },
+  "Alathur": {
+    "name": "K Radhakrishnan",
+    "party": "Communist Party of India (Marxist)",
+    "phone": "9447787999",
+    "email": "k.radhakrishnan64@mpls.sansad.in"
+  },
+  "Kozhikode": {
+    "name": "M K Raghavan",
+    "party": "Indian National Congress",
+    "phone": "9446063011",
+    "email": "mk.raghavan@mpls.sansad.in"
+  },
+  "Ponnani": {
+    "name": "M P Abdussamad Samadani",
+    "party": "Indian Union Muslim League",
+    "phone": "8547157777",
+    "email": "samadani@mpls.sansad.in"
+  },
+  "Palakkad": {
+    "name": "V K Sreekandan",
+    "party": "Indian National Congress",
+    "phone": "9447035000",
+    "email": "vk.sreekandan@mpls.sansad.in"
+  },
+  "Kannur": {
+    "name": "K Sudhakaran",
+    "party": "Indian National Congress",
+    "phone": "9446471300",
+    "email": "ksudhakaran.mp@mpls.sansad.in"
+  },
+  "Mavelikara": {
+    "name": "Kodikunnil Suresh",
+    "party": "Indian National Congress",
+    "phone": "9447145400",
+    "email": "kodikunnil.suresh@mpls.sansad.in"
+  },
+  "Thiruvananthapuram": {
+    "name": "Shashi Tharoor",
+    "party": "Indian National Congress",
+    "phone": "9013180980",
+    "email": "office@tharoor.in"
+  },
+  "Kasaragod": {
+    "name": "Rajmohan Unnithan",
+    "party": "Indian National Congress",
+    "phone": "9447590800",
+    "email": "rajmohan.unnithan@mpls.sansad.in"
+  },
+  "Wayanad": {
+    "name": "Priyanka Gandhi Vadra",
+    "party": "Indian National Congress",
+    "phone": null,
+    "email": "priyankag.vadra@mpls.sansad.in"
+  },
+  "Alappuzha": {
+    "name": "K C Venugopal",
+    "party": "Indian National Congress",
+    "phone": "9447016661",
+    "email": "kc.venugopal@mpls.sansad.in"
+  }
+}

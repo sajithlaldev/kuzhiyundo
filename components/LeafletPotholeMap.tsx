@@ -21,6 +21,7 @@ import { fetchWithAppCheck } from "../lib/appcheck-fetch";
 import { initClarity } from "../lib/clarity";
 import { getConstituency } from "../lib/constituency";
 import { getWardMember, type WardMember } from "../lib/ward-member";
+import { getMla, getMp, type PoliticianInfo } from "../lib/mla-mp";
 import { useAuthStore } from "../lib/store";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -1459,6 +1460,83 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                 </div>
               </div>
             )}
+            {(() => {
+              const acNo = report.acNo ?? ac?.acNo;
+              const pcName = report.pcName ?? ac?.pcName;
+              const mla = getMla(acNo);
+              const mp = getMp(pcName);
+              if (!mla && !mp) return null;
+              return (
+                <>
+                  {mla && (
+                    <div className="col-span-2">
+                      <div className="text-cyan-500/50 uppercase tracking-widest mb-1">MLA — {report.acName ?? ac?.acName}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-cyan-300 font-bold">{mla.name}</div>
+                          <div className="text-cyan-400/60 text-[10px] mt-0.5">{mla.party}</div>
+                        </div>
+                        <div className="flex gap-1.5 shrink-0">
+                          {mla.phone && (
+                            <a
+                              href={`tel:${mla.phone}`}
+                              aria-label={`Call MLA ${mla.name}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/40 text-green-400 text-[10px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors"
+                            >
+                              <svg aria-hidden="true" className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>
+                              Call
+                            </a>
+                          )}
+                          {mla.email && (
+                            <a
+                              href={`mailto:${mla.email}`}
+                              aria-label={`Email MLA ${mla.name}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/40 text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:bg-cyan-500/20 transition-colors"
+                            >
+                              <svg aria-hidden="true" className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                              Email
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {mp && (
+                    <div className="col-span-2">
+                      <div className="text-cyan-500/50 uppercase tracking-widest mb-1">MP — {report.pcName ?? ac?.pcName}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-cyan-300 font-bold">{mp.name}</div>
+                          <div className="text-cyan-400/60 text-[10px] mt-0.5">{mp.party}</div>
+                        </div>
+                        <div className="flex gap-1.5 shrink-0">
+                        {mp.phone && (
+                          <a
+                            href={`tel:${mp.phone}`}
+                            aria-label={`Call MP ${mp.name}`}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/40 text-green-400 text-[10px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors"
+                          >
+                            <svg aria-hidden="true" className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>
+                            Call
+                          </a>
+                        )}
+                        {mp.email && (
+                          <a
+                            href={`mailto:${mp.email}`}
+                            aria-label={`Email MP ${mp.name}`}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/40 text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:bg-cyan-500/20 transition-colors"
+                          >
+                            <svg aria-hidden="true" className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            Email
+                          </a>
+                        )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Notes */}
