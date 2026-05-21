@@ -1462,11 +1462,8 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               <div>
                 <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward</div>
                 <div className="text-cyan-300 font-bold">
-                  #{report.wardNo ?? ac?.wardNo}
+                  {report.wardName ?? ac?.wardName} (#{report.wardNo ?? ac?.wardNo})
                 </div>
-                {(report.wardName ?? ac?.wardName) && (
-                  <div className="text-cyan-400/70 mt-0.5 leading-tight">{report.wardName ?? ac?.wardName}</div>
-                )}
               </div>
             )}
             {(() => {
@@ -1476,12 +1473,12 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               const mp = getMp(pcName);
               const PhoneIcon = () => (
                 <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/>
+                  <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
                 </svg>
               );
               const MailIcon = () => (
                 <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               );
               const ContactCell = ({ label, name, party, phone, email }: { label: string; name: string; party?: string | null; phone?: string | null; email?: string | null }) => (
@@ -1519,18 +1516,16 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                   )}
                   {mla && (
                     <ContactCell
-                      label={`MLA · ${report.acName ?? ac?.acName ?? ""}`}
+                      label={`MLA`}
                       name={mla.name}
-                      party={mla.party}
                       phone={mla.phone}
                       email={mla.email}
                     />
                   )}
                   {mp && (
                     <ContactCell
-                      label={`MP · ${report.pcName ?? ac?.pcName ?? ""}`}
+                      label={`MP`}
                       name={mp.name}
-                      party={mp.party}
                       phone={mp.phone}
                       email={mp.email}
                     />
