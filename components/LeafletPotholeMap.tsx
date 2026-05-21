@@ -1462,30 +1462,11 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               <div>
                 <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward</div>
                 <div className="text-cyan-300 font-bold">
-                  {report.wardName ?? ac?.wardName ?? "Ward"} #{report.wardNo ?? ac?.wardNo}
+                  #{report.wardNo ?? ac?.wardNo}
                 </div>
-              </div>
-            )}
-            {wardMember && (
-              <div className="col-span-2">
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-1">Ward Member</div>
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-cyan-300 font-bold">{wardMember.memberName}</div>
-                    {wardMember.party && (
-                      <div className="text-cyan-400/60 text-[10px] mt-0.5">{wardMember.party}</div>
-                    )}
-                  </div>
-                  {wardMember.phone && (
-                    <a
-                      href={`tel:${wardMember.phone}`}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/40 text-green-400 text-[10px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors shrink-0"
-                    >
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>
-                      Call
-                    </a>
-                  )}
-                </div>
+                {(report.wardName ?? ac?.wardName) && (
+                  <div className="text-cyan-400/70 mt-0.5 leading-tight">{report.wardName ?? ac?.wardName}</div>
+                )}
               </div>
             )}
             {(() => {
@@ -1493,74 +1474,66 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               const pcName = report.pcName ?? ac?.pcName;
               const mla = getMla(acNo);
               const mp = getMp(pcName);
-              if (!mla && !mp) return null;
-              return (
-                <>
-                  {mla && (
-                    <div className="col-span-2">
-                      <div className="text-cyan-500/50 uppercase tracking-widest mb-1">MLA — {report.acName ?? ac?.acName}</div>
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-cyan-300 font-bold">{mla.name}</div>
-                          <div className="text-cyan-400/60 text-[10px] mt-0.5">{mla.party}</div>
-                        </div>
-                        <div className="flex gap-1.5 shrink-0">
-                          {mla.phone && (
-                            <a
-                              href={`tel:${mla.phone}`}
-                              aria-label={`Call MLA ${mla.name}`}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/40 text-green-400 text-[10px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors"
-                            >
-                              <svg aria-hidden="true" className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>
-                              Call
-                            </a>
-                          )}
-                          {mla.email && (
-                            <a
-                              href={`mailto:${mla.email}`}
-                              aria-label={`Email MLA ${mla.name}`}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/40 text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:bg-cyan-500/20 transition-colors"
-                            >
-                              <svg aria-hidden="true" className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                              Email
-                            </a>
-                          )}
-                        </div>
-                      </div>
+              const PhoneIcon = () => (
+                <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/>
+                </svg>
+              );
+              const MailIcon = () => (
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+              );
+              const ContactCell = ({ label, name, party, phone, email }: { label: string; name: string; party?: string | null; phone?: string | null; email?: string | null }) => (
+                <div>
+                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">{label}</div>
+                  <div className="text-cyan-300 font-bold leading-tight">{name}</div>
+                  {party && <div className="text-cyan-400/60 text-[9px] mt-0.5 leading-tight">{party}</div>}
+                  {(phone || email) && (
+                    <div className="flex gap-1 mt-1.5">
+                      {phone && (
+                        <a href={`tel:${phone}`} aria-label={`Call ${name}`}
+                          className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors">
+                          <PhoneIcon /> Call
+                        </a>
+                      )}
+                      {email && (
+                        <a href={`mailto:${email}`} aria-label={`Email ${name}`}
+                          className="flex items-center gap-1 px-1.5 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[9px] font-bold uppercase tracking-widest hover:bg-cyan-500/20 transition-colors">
+                          <MailIcon /> Mail
+                        </a>
+                      )}
                     </div>
                   )}
+                </div>
+              );
+              return (
+                <>
+                  {wardMember && (
+                    <ContactCell
+                      label={`Ward Member`}
+                      name={wardMember.memberName ?? ""}
+                      party={wardMember.party}
+                      phone={wardMember.phone}
+                    />
+                  )}
+                  {mla && (
+                    <ContactCell
+                      label={`MLA · ${report.acName ?? ac?.acName ?? ""}`}
+                      name={mla.name}
+                      party={mla.party}
+                      phone={mla.phone}
+                      email={mla.email}
+                    />
+                  )}
                   {mp && (
-                    <div className="col-span-2">
-                      <div className="text-cyan-500/50 uppercase tracking-widest mb-1">MP — {report.pcName ?? ac?.pcName}</div>
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-cyan-300 font-bold">{mp.name}</div>
-                          <div className="text-cyan-400/60 text-[10px] mt-0.5">{mp.party}</div>
-                        </div>
-                        <div className="flex gap-1.5 shrink-0">
-                        {mp.phone && (
-                          <a
-                            href={`tel:${mp.phone}`}
-                            aria-label={`Call MP ${mp.name}`}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/40 text-green-400 text-[10px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors"
-                          >
-                            <svg aria-hidden="true" className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>
-                            Call
-                          </a>
-                        )}
-                        {mp.email && (
-                          <a
-                            href={`mailto:${mp.email}`}
-                            aria-label={`Email MP ${mp.name}`}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/40 text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:bg-cyan-500/20 transition-colors"
-                          >
-                            <svg aria-hidden="true" className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                            Email
-                          </a>
-                        )}
-                        </div>
-                      </div>
-                    </div>
+                    <ContactCell
+                      label={`MP · ${report.pcName ?? ac?.pcName ?? ""}`}
+                      name={mp.name}
+                      party={mp.party}
+                      phone={mp.phone}
+                      email={mp.email}
+                    />
                   )}
                 </>
               );
