@@ -1209,12 +1209,13 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
     if (wardMemberFetched.current) return;
     const secLsgCode = report.secLsgCode ?? ac?.secLsgCode;
     const wardNo = report.wardNo ?? ac?.wardNo;
-    if (!secLsgCode || wardNo == null) return;
+    const lsgd = report.lsgd ?? ac?.lsgd;
+    if (wardNo == null || (!secLsgCode && !lsgd)) return;
     wardMemberFetched.current = true;
-    getWardMember(secLsgCode, wardNo)
+    getWardMember(secLsgCode, wardNo, lsgd)
       .then(data => { if (data?.memberName) setWardMember(data); })
       .catch(() => { });
-  }, [ac, report.secLsgCode, report.wardNo]);
+  }, [ac, report.secLsgCode, report.wardNo, report.lsgd]);
 
   useEffect(() => {
     const missingConstituency = report.acNo == null || report.pcName == null;

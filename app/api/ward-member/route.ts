@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAppCheckToken } from "@/lib/appcheck-verify";
 
 const MEMBERS_URL =
-  "https://github.com/sajithlaldev/kuzhiyundo/releases/download/v1.0-wards/ward_members.json";
+  "https://github.com/sajithlaldev/kuzhiyundo/releases/download/v1.1-wards/ward_members.json";
 
 // Re-indexed by "secLsgCode|wardNo" (wardNo zero-padded to 3 digits)
 let _index: Record<string, any> | null = null;
@@ -32,13 +32,19 @@ export async function GET(req: NextRequest) {
 
   const secLsgCode = req.nextUrl.searchParams.get("secLsgCode") ?? "";
   const wardNo = req.nextUrl.searchParams.get("wardNo") ?? "";
+  const lsgd = req.nextUrl.searchParams.get("lsgd") ?? "";
 
-  if (!secLsgCode || !wardNo) return NextResponse.json(null);
+  if (!wardNo || (!secLsgCode && !lsgd)) return NextResponse.json(null);
 
   try {
     const index = await getIndex();
     const padded = String(wardNo).padStart(3, "0");
-    const member = index[`${secLsgCode}|${padded}`] ?? null;
+
+    let member = secLsgCode ? (index[`${secLsgCode}|${padded}`] ?? null) : null;
+    if (!member && lsgd) {
+      member = index[`LSGD:${lsgd}|${padded}`] ?? null;
+    }
+
     return NextResponse.json(member, {
       headers: { "Cache-Control": "public, max-age=86400" },
     });

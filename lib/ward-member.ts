@@ -10,13 +10,15 @@ export interface WardMember {
 }
 
 export async function getWardMember(
-  secLsgCode: string,
+  secLsgCode: string | null | undefined,
   wardNo: string | number,
+  lsgd?: string | null,
 ): Promise<WardMember | null> {
   try {
-    const res = await fetchWithAppCheck(
-      `/api/ward-member?secLsgCode=${encodeURIComponent(secLsgCode)}&wardNo=${encodeURIComponent(wardNo)}`,
-    );
+    const params = new URLSearchParams({ wardNo: String(wardNo) });
+    if (secLsgCode) params.set("secLsgCode", secLsgCode);
+    if (lsgd) params.set("lsgd", lsgd);
+    const res = await fetchWithAppCheck(`/api/ward-member?${params}`);
     if (!res.ok) return null;
     return await res.json();
   } catch {
