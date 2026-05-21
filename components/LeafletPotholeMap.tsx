@@ -1203,6 +1203,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   const [ac, setAc] = useState(initialAc ?? null);
   const [wardMember, setWardMember] = useState<WardMember | null>(null);
   const wardMemberFetched = useRef(false);
+  const constituencyFetched = useRef(false);
 
   useEffect(() => {
     if (wardMemberFetched.current) return;
@@ -1220,32 +1221,47 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
     const missingWard = report.wardNo == null || report.secLsgCode == null;
     if (!missingConstituency && !missingWard && ac) return;
     if (!report.encodedPath) return;
+    if (constituencyFetched.current) return;
+    constituencyFetched.current = true;
     (async () => {
       try {
         const { decode } = await import("@googlemaps/polyline-codec");
         const path = decode(report.encodedPath);
         if (!path.length) return;
-        const mid = path[Math.floor(path.length / 2)];
-        const info = await getConstituency(mid[0], mid[1]);
-        if (info) {
-          setAc(info);
-          const updates: Record<string, any> = {};
-          if (missingConstituency) {
-            updates.acNo = info.acNo;
-            updates.acName = info.acName;
-            updates.pcName = info.pcName;
-            if (info.lsgd) updates.lsgd = info.lsgd;
-            if (info.lsgdType) updates.lsgdType = info.lsgdType;
-            if (info.lsgdLabel) updates.lsgdLabel = info.lsgdLabel;
-          }
-          if (missingWard) {
-            if (info.wardNo != null) updates.wardNo = info.wardNo;
-            if (info.wardName) updates.wardName = info.wardName;
-            if (info.secLsgCode) updates.secLsgCode = info.secLsgCode;
-          }
-          if (Object.keys(updates).length) {
-            updateDoc(doc(db, "potholes", report.id), updates).catch(() => { });
-          }
+
+        // Try midpoint → origin → end until we find a result with wardNo
+        const candidates: [number, number][] = [
+          path[Math.floor(path.length / 2)],
+          path[0],
+          path[path.length - 1],
+        ];
+
+        let best: any = null;
+        for (const [lat, lng] of candidates) {
+          const result = await getConstituency(lat, lng);
+          if (!result) continue;
+          if (!best) best = result;
+          if (result.wardNo != null) { best = result; break; }
+        }
+
+        if (!best) return;
+        setAc(best);
+        const updates: Record<string, any> = {};
+        if (missingConstituency) {
+          updates.acNo = best.acNo;
+          updates.acName = best.acName;
+          updates.pcName = best.pcName;
+          if (best.lsgd) updates.lsgd = best.lsgd;
+          if (best.lsgdType) updates.lsgdType = best.lsgdType;
+          if (best.lsgdLabel) updates.lsgdLabel = best.lsgdLabel;
+        }
+        if (missingWard) {
+          if (best.wardNo != null) updates.wardNo = best.wardNo;
+          if (best.wardName) updates.wardName = best.wardName;
+          if (best.secLsgCode) updates.secLsgCode = best.secLsgCode;
+        }
+        if (Object.keys(updates).length) {
+          updateDoc(doc(db, "potholes", report.id), updates).catch(() => { });
         }
       } catch { }
     })();
@@ -1996,7 +2012,7 @@ function SubmitRouteForm({
       const path = decode(currentPathEncoded) as [number, number][];
       const mid = path[Math.floor(path.length / 2)];
       const [constituency, roadInfo] = await Promise.all([
-        getConstituency(origin.lat, origin.lng),
+        getConstituency(mid[0], mid[1]),
         fetchRoadClassification(mid[0], mid[1]),
       ]);
 

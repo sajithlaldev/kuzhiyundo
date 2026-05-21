@@ -29,7 +29,7 @@ async function getFeatures() {
   return { acFeatures: _acFeatures!, lsgiFeatures: _lsgiFeatures! };
 }
 
-async function getWard(lat: number, lng: number): Promise<{ wardNo: string | number; wardName: string } | null> {
+async function getWard(lat: number, lng: number): Promise<{ wardNo: string | number | null; wardName: string | null }> {
   const pad = 0.01;
   const rect = { minX: lng - pad, minY: lat - pad, maxX: lng + pad, maxY: lat + pad };
   const pt = point([lng, lat]);
@@ -44,7 +44,7 @@ async function getWard(lat: number, lng: number): Promise<{ wardNo: string | num
   } catch {
     // ward lookup is best-effort — don't fail the whole request
   }
-  return null;
+  return { wardNo: null, wardName: null };
 }
 
 export async function GET(req: NextRequest) {
