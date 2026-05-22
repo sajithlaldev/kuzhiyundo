@@ -747,9 +747,9 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                   e.stopPropagation();
                   setDetailReportId(report.id);
                 }}
-                className="w-full mt-1 py-1 text-[9px] uppercase tracking-widest text-cyan-400/70 hover:text-cyan-400 border-t border-cyan-500/20 hover:border-cyan-500/50 transition-all"
+                className="w-full mt-1 py-1.5 text-[9px] font-bold uppercase tracking-widest text-cyan-300 bg-cyan-900/40 hover:bg-cyan-800/60 border-t border-cyan-400/40 hover:border-cyan-400 shadow-[0_0_6px_rgba(0,255,255,0.15)] hover:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition-all"
               >
-                Expand ↓
+                View Details ↓
               </button>
             </>
           )}
@@ -1542,6 +1542,21 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
             </div>
           )}
 
+          {/* Vote nudge */}
+          <div className="rounded border border-cyan-500/20 bg-cyan-950/40 px-3 py-2 text-[10px] leading-relaxed text-cyan-400/80">
+            <span className="font-bold text-cyan-400">Confirm</span> if you&apos;ve seen this pothole —
+            more confirmations make the report credible and increase the chance of{" "}
+            <span className="font-bold text-cyan-300">government action</span>.{" "}
+            <span className="font-bold text-red-400">Dispute</span> only if this road is fine or the report is inaccurate.{" "}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleShare(); }}
+              className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-200 transition-colors"
+            >
+              Share
+            </button>{" "}
+            with neighbours &amp; friends to get more votes.
+          </div>
+
           {/* Vote buttons */}
           <div className="flex gap-2 pt-1 border-t border-cyan-500/20">
             <button
@@ -1716,14 +1731,15 @@ function ReportingOverlay({
                 </button>
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="md:hidden text-cyan-400 p-1 border border-cyan-500/30 rounded-sm bg-cyan-900/30 hover:bg-cyan-800/50 transition-colors"
+                  className="md:hidden flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-cyan-300 px-2 py-1.5 border border-cyan-400/50 bg-cyan-900/50 hover:bg-cyan-800/60 shadow-[0_0_8px_rgba(0,255,255,0.2)] transition-all"
                 >
                   <div
                     className="transition-transform duration-300"
                     style={{ transform: `rotate(${isExpanded ? 180 : 0}deg)` }}
                   >
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronDown className="w-3.5 h-3.5" />
                   </div>
+                  {isExpanded ? "Less" : "More"}
                 </button>
               </div>
             </div>
