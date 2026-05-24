@@ -15,7 +15,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import { motion, AnimatePresence, useMotionValue, useTransform } from "motion/react";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
 import { db, loginWithGoogle, logout } from "../lib/firebase";
 import { fetchWithAppCheck } from "../lib/appcheck-fetch";
 import { initClarity } from "../lib/clarity";
@@ -1347,6 +1347,71 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   };
 
   const dragY = useMotionValue(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Non-passive touch handler: scrolls content normally, but when at top and
+  // pulling down, hands off to sheet-dismiss animation instead.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let startY = 0;
+    let active = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY;
+      active = false;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const dy = e.touches[0].clientY - startY;
+      if (!active) {
+        if (el.scrollTop <= 0 && dy > 8) active = true;
+        else return;
+      }
+      e.preventDefault(); // block scroll — we're dismissing the sheet
+      dragY.set(Math.max(0, dy));
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!active) return;
+      active = false;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (dy > 100) {
+        onClose();
+      } else {
+        animate(dragY, 0, { type: "spring", stiffness: 300, damping: 30 });
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [dragY, onClose]);
+
+  // Handle-bar drag (pointer-based, works on desktop too)
+  function startHandleDrag(e: React.PointerEvent) {
+    e.stopPropagation();
+    const startY = e.clientY;
+    const startVal = dragY.get();
+
+    const onMove = (ev: PointerEvent) => {
+      dragY.set(Math.max(0, startVal + ev.clientY - startY));
+    };
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      const dy = ev.clientY - startY;
+      if (dy > 100) onClose();
+      else animate(dragY, 0, { type: "spring", stiffness: 300, damping: 30 });
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
 
   return (
     <>
@@ -1361,7 +1426,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         transition={{ duration: 0.2 }}
       />
       <motion.div
-        className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] overflow-y-auto shadow-[0_-8px_40px_rgba(0,255,255,0.1)]"
+        className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] flex flex-col shadow-[0_-8px_40px_rgba(0,255,255,0.1)]"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.nativeEvent.stopPropagation()}
         onTouchStart={(e) => e.nativeEvent.stopPropagation()}
@@ -1369,214 +1434,215 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        drag="y"
-        dragConstraints={{ top: 0 }}
-        dragElastic={{ top: 0.1, bottom: 0.4 }}
         style={{ y: dragY }}
-        onDragEnd={(_, info) => {
-          if (info.offset.y > 100 || info.velocity.y > 400) {
-            onClose();
-          }
-        }}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2 sticky top-0 cursor-grab active:cursor-grabbing">
+        {/* Handle — drag to dismiss */}
+        <div
+          className="flex justify-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing"
+          onPointerDown={startHandleDrag}
+        >
           <div className="w-12 h-1.5 rounded-full bg-cyan-500/40" />
         </div>
+        {/* Scrollable content */}
+        <div
+          ref={scrollRef}
+          className="overflow-y-auto flex-1"
+        >
 
-        {/* Header */}
-        <div className="flex items-start justify-between px-4 pt-2 pb-3 border-b border-cyan-500/20">
-          <div>
-            <div className="text-[9px] uppercase tracking-widest text-cyan-500/60 mb-1">Kuzhi Report</div>
-            <div className="text-sm font-bold text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
-            {ac && (
-              <div className="flex flex-col gap-0.5 mt-0.5">
-                {ac.lsgdLabel && <div className="text-[10px] text-orange-400/80">{ac.lsgdLabel}</div>}
-                {ac.acName && (
-                  <div className="text-[10px] text-orange-400/60">
-                    {ac.acName} AC{ac.pcName ? ` · ${ac.pcName} PC` : ""}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3 ml-3 mt-1 shrink-0">
-            <button onClick={handleShare} className="text-cyan-500/50 hover:text-cyan-400">
-              <Share2 className="w-5 h-5" />
-            </button>
-            <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="px-4 py-3 flex flex-col gap-3">
-          {/* Mini map */}
-          {report.encodedPath && (
-            <MiniMap reportId={report.id} encodedPath={report.encodedPath} severity={report.severity || "low"} roadAuthority={report.roadAuthority} highwayTag={report.highwayTag} />
-          )}
-
-          {/* Severity + Status + Score */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2 py-0.5 text-[9px] uppercase font-bold text-black" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}>
-              {report.severity?.toUpperCase() || "LOW"}
-            </span>
-            <span className="px-2 py-0.5 text-[9px] uppercase font-bold border border-cyan-500/50 text-cyan-400">
-              {report.status?.toUpperCase() || "REPORTED"}
-            </span>
-            <span className="text-[9px] text-cyan-500/60 ml-auto">
-              Score: <span className={upvoters.length - downvoters.length < 0 ? "text-red-400" : "text-cyan-400"}>
-                {upvoters.length - downvoters.length > 0 ? "+" : ""}{upvoters.length - downvoters.length}
-              </span>
-            </span>
-          </div>
-
-          {/* Image */}
-          {report.imageUrl && (
-            <div className="w-full rounded border border-cyan-500/30 overflow-hidden">
-              <img src={report.imageUrl} alt="Pothole" className="w-full object-cover max-h-48" />
-            </div>
-          )}
-
-          {/* Details grid */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
+          {/* Header */}
+          <div className="flex items-start justify-between px-4 pt-2 pb-3 border-b border-cyan-500/20">
             <div>
-              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Reported By</div>
-              <div className="text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
-            </div>
-            <div>
-              <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
-              <div className="text-cyan-300 font-bold">
-                {report.createdAt
-                  ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-                  : "—"}
-              </div>
-            </div>
-            {report.district && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
-                <div className="text-cyan-300 font-bold">{report.district}</div>
-              </div>
-            )}
-            {(report.wardNo != null || ac?.wardNo != null) && (
-              <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward</div>
-                <div className="text-cyan-300 font-bold">
-                  {report.wardName ?? ac?.wardName} (#{report.wardNo ?? ac?.wardNo})
-                </div>
-              </div>
-            )}
-            {(() => {
-              const acNo = report.acNo ?? ac?.acNo;
-              const pcName = report.pcName ?? ac?.pcName;
-              const mla = getMla(acNo);
-              const mp = getMp(pcName);
-              const PhoneIcon = () => (
-                <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
-                </svg>
-              );
-              const MailIcon = () => (
-                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              );
-              const ContactCell = ({ label, name, party, phone, email }: { label: string; name: string; party?: string | null; phone?: string | null; email?: string | null }) => (
-                <div>
-                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">{label}</div>
-                  <div className="text-cyan-300 font-bold leading-tight">{name}</div>
-                  {party && <div className="text-cyan-400/60 text-[9px] mt-0.5 leading-tight">{party}</div>}
-                  {(phone || email) && (
-                    <div className="flex gap-1 mt-1.5">
-                      {phone && (
-                        <a href={`tel:${phone}`} aria-label={`Call ${name}`}
-                          className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors">
-                          <PhoneIcon /> Call
-                        </a>
-                      )}
-                      {email && (
-                        <a href={`mailto:${email}`} aria-label={`Email ${name}`}
-                          className="flex items-center gap-1 px-1.5 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[9px] font-bold uppercase tracking-widest hover:bg-cyan-500/20 transition-colors">
-                          <MailIcon /> Mail
-                        </a>
-                      )}
+              <div className="text-[9px] uppercase tracking-widest text-cyan-500/60 mb-1">Kuzhi Report</div>
+              <div className="text-sm font-bold text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
+              {ac && (
+                <div className="flex flex-col gap-0.5 mt-0.5">
+                  {ac.lsgdLabel && <div className="text-[10px] text-orange-400/80">{ac.lsgdLabel}</div>}
+                  {ac.acName && (
+                    <div className="text-[10px] text-orange-400/60">
+                      {ac.acName} AC{ac.pcName ? ` · ${ac.pcName} PC` : ""}
                     </div>
                   )}
                 </div>
-              );
-              return (
-                <>
-                  {wardMember && (
-                    <ContactCell
-                      label={`Ward Member`}
-                      name={wardMember.memberName ?? ""}
-                      party={wardMember.party}
-                      phone={wardMember.phone}
-                    />
-                  )}
-                  {mla && (
-                    <ContactCell
-                      label={`MLA`}
-                      name={mla.name}
-                      phone={mla.phone}
-                      email={mla.email}
-                    />
-                  )}
-                  {mp && (
-                    <ContactCell
-                      label={`MP`}
-                      name={mp.name}
-                      phone={mp.phone}
-                      email={mp.email}
-                    />
-                  )}
-                </>
-              );
-            })()}
-          </div>
-
-          {/* Notes */}
-          {report.notes && (
-            <div className="border-l-2 border-cyan-500/40 pl-3 text-[11px] text-cyan-400/80 italic leading-relaxed">
-              "{report.notes}"
+              )}
             </div>
-          )}
-
-          {/* Vote nudge */}
-          <div className="rounded border border-cyan-500/20 bg-cyan-950/40 px-3 py-2 text-[10px] leading-relaxed text-cyan-400/80">
-            <span className="font-bold text-cyan-400">Confirm</span> if you&apos;ve seen this pothole —
-            more confirmations make the report credible and increase the chance of{" "}
-            <span className="font-bold text-cyan-300">government action</span>.{" "}
-            <span className="font-bold text-red-400">Dispute</span> only if this road is fine or the report is inaccurate.{" "}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleShare(); }}
-              className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-200 transition-colors"
-            >
-              Share
-            </button>{" "}
-            with neighbours &amp; friends to get more votes.
+            <div className="flex items-center gap-3 ml-3 mt-1 shrink-0">
+              <button onClick={handleShare} className="text-cyan-500/50 hover:text-cyan-400">
+                <Share2 className="w-5 h-5" />
+              </button>
+              <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
-          {/* Vote buttons */}
-          <div className="flex gap-2 pt-1 border-t border-cyan-500/20">
-            <button
-              onClick={(e) => { e.stopPropagation(); onVote(report.id, "up", upvoters, downvoters); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasUpvoted ? "border-cyan-400 bg-cyan-900/50 text-cyan-400" : "border-cyan-500/30 text-cyan-500/50 hover:bg-cyan-900/30 hover:text-cyan-400"}`}
-            >
-              <ThumbsUp className={`w-3 h-3 ${hasUpvoted ? "fill-cyan-400" : ""}`} />
-              Confirm ({upvoters.length})
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onVote(report.id, "down", upvoters, downvoters); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasDownvoted ? "border-red-500 bg-red-900/50 text-red-500" : "border-cyan-500/30 text-cyan-500/50 hover:bg-red-900/30 hover:text-red-500"}`}
-            >
-              <ThumbsDown className={`w-3 h-3 ${hasDownvoted ? "fill-red-500" : ""}`} />
-              Dispute ({downvoters.length})
-            </button>
-          </div>
-        </div>
+          <div className="px-4 py-3 flex flex-col gap-3">
+            {/* Mini map */}
+            {report.encodedPath && (
+              <MiniMap reportId={report.id} encodedPath={report.encodedPath} severity={report.severity || "low"} roadAuthority={report.roadAuthority} highwayTag={report.highwayTag} />
+            )}
 
-        <div style={{ height: "max(0.75rem, var(--sab))" }} />
+            {/* Severity + Status + Score */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2 py-0.5 text-[9px] uppercase font-bold text-black" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}>
+                {report.severity?.toUpperCase() || "LOW"}
+              </span>
+              <span className="px-2 py-0.5 text-[9px] uppercase font-bold border border-cyan-500/50 text-cyan-400">
+                {report.status?.toUpperCase() || "REPORTED"}
+              </span>
+              <span className="text-[9px] text-cyan-500/60 ml-auto">
+                Score: <span className={upvoters.length - downvoters.length < 0 ? "text-red-400" : "text-cyan-400"}>
+                  {upvoters.length - downvoters.length > 0 ? "+" : ""}{upvoters.length - downvoters.length}
+                </span>
+              </span>
+            </div>
+
+            {/* Image */}
+            {report.imageUrl && (
+              <div className="w-full rounded border border-cyan-500/30 overflow-hidden">
+                <img src={report.imageUrl} alt="Pothole" className="w-full object-cover max-h-48" />
+              </div>
+            )}
+
+            {/* Details grid */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
+              <div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Reported By</div>
+                <div className="text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
+              </div>
+              <div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
+                <div className="text-cyan-300 font-bold">
+                  {report.createdAt
+                    ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                    : "—"}
+                </div>
+              </div>
+              {report.district && (
+                <div>
+                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
+                  <div className="text-cyan-300 font-bold">{report.district}</div>
+                </div>
+              )}
+              {(report.wardNo != null || ac?.wardNo != null) && (
+                <div>
+                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward</div>
+                  <div className="text-cyan-300 font-bold">
+                    {report.wardName ?? ac?.wardName} (#{report.wardNo ?? ac?.wardNo})
+                  </div>
+                </div>
+              )}
+              {(() => {
+                const acNo = report.acNo ?? ac?.acNo;
+                const pcName = report.pcName ?? ac?.pcName;
+                const mla = getMla(acNo);
+                const mp = getMp(pcName);
+                const PhoneIcon = () => (
+                  <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+                  </svg>
+                );
+                const MailIcon = () => (
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                );
+                const ContactCell = ({ label, name, party, phone, email }: { label: string; name: string; party?: string | null; phone?: string | null; email?: string | null }) => (
+                  <div>
+                    <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">{label}</div>
+                    <div className="text-cyan-300 font-bold leading-tight">{name}</div>
+                    {party && <div className="text-cyan-400/60 text-[9px] mt-0.5 leading-tight">{party}</div>}
+                    {(phone || email) && (
+                      <div className="flex gap-1 mt-1.5">
+                        {phone && (
+                          <a href={`tel:${phone}`} aria-label={`Call ${name}`}
+                            className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors">
+                            <PhoneIcon /> Call
+                          </a>
+                        )}
+                        {email && (
+                          <a href={`mailto:${email}`} aria-label={`Email ${name}`}
+                            className="flex items-center gap-1 px-1.5 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[9px] font-bold uppercase tracking-widest hover:bg-cyan-500/20 transition-colors">
+                            <MailIcon /> Mail
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+                return (
+                  <>
+                    {wardMember && (
+                      <ContactCell
+                        label={`Ward Member`}
+                        name={wardMember.memberName ?? ""}
+                        party={wardMember.party}
+                        phone={wardMember.phone}
+                      />
+                    )}
+                    {mla && (
+                      <ContactCell
+                        label={`MLA`}
+                        name={mla.name}
+                        phone={mla.phone}
+                        email={mla.email}
+                      />
+                    )}
+                    {mp && (
+                      <ContactCell
+                        label={`MP`}
+                        name={mp.name}
+                        phone={mp.phone}
+                        email={mp.email}
+                      />
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Notes */}
+            {report.notes && (
+              <div className="border-l-2 border-cyan-500/40 pl-3 text-[11px] text-cyan-400/80 italic leading-relaxed">
+                "{report.notes}"
+              </div>
+            )}
+
+            {/* Vote nudge */}
+            <div className="rounded border border-cyan-500/20 bg-cyan-950/40 px-3 py-2 text-[10px] leading-relaxed text-cyan-400/80">
+              <span className="font-bold text-cyan-400">Confirm</span> if you&apos;ve seen this pothole —
+              more confirmations make the report credible and increase the chance of{" "}
+              <span className="font-bold text-cyan-300">government action</span>.{" "}
+              <span className="font-bold text-red-400">Dispute</span> only if this road is fine or the report is inaccurate.{" "}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-200 transition-colors"
+              >
+                Share
+              </button>{" "}
+              with neighbours &amp; friends to get more votes.
+            </div>
+
+            {/* Vote buttons */}
+            <div className="flex gap-2 pt-1 border-t border-cyan-500/20">
+              <button
+                onClick={(e) => { e.stopPropagation(); onVote(report.id, "up", upvoters, downvoters); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasUpvoted ? "border-cyan-400 bg-cyan-900/50 text-cyan-400" : "border-cyan-500/30 text-cyan-500/50 hover:bg-cyan-900/30 hover:text-cyan-400"}`}
+              >
+                <ThumbsUp className={`w-3 h-3 ${hasUpvoted ? "fill-cyan-400" : ""}`} />
+                Confirm ({upvoters.length})
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onVote(report.id, "down", upvoters, downvoters); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasDownvoted ? "border-red-500 bg-red-900/50 text-red-500" : "border-cyan-500/30 text-cyan-500/50 hover:bg-red-900/30 hover:text-red-500"}`}
+              >
+                <ThumbsDown className={`w-3 h-3 ${hasDownvoted ? "fill-red-500" : ""}`} />
+                Dispute ({downvoters.length})
+              </button>
+            </div>
+          </div>
+
+          <div style={{ height: "max(0.75rem, var(--sab))" }} />
+        </div>{/* end scrollable content */}
       </motion.div>
     </>
   );
