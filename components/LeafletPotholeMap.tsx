@@ -1147,48 +1147,13 @@ function getGeotagPlatform(): "ios" | "android" | "other" {
   return "other";
 }
 
-const GEOTAG_INSTRUCTIONS: Record<"ios" | "android" | "other", { title: string; steps: string[]; videoUrl?: string; videoLabel?: string }> = {
-  ios: {
-    title: "Enable geotagging on iPhone / iPad",
-    steps: [
-      'Open Settings → Privacy & Security → Location Services',
-      'Find Camera in the list → set to "While Using the App"',
-      'Re-open the Camera app and take a new photo of the pothole',
-      'Upload that photo here',
-    ],
-    videoUrl: "https://www.youtube.com/watch?v=Vfq1eZP7r7g",
-    videoLabel: "Watch tutorial on YouTube",
-  },
-  android: {
-    title: "Enable geotagging on Android",
-    steps: [
-      'Open the Camera app',
-      'Tap the Settings icon (gear / three lines)',
-      'Find "Location tags", "GPS tag", or "Save location" → turn it On',
-      'Allow the Camera app to access location if prompted',
-      'Take a new photo of the pothole and upload it here',
-    ],
-    videoUrl: "https://www.youtube.com/watch?v=r6eEVL9XgXU",
-    videoLabel: "Watch tutorial on YouTube",
-  },
-  other: {
-    title: "How to get a geotagged photo",
-    steps: [
-      'Use your phone\'s default Camera app (not a third-party app)',
-      'Make sure location permission is granted to the Camera app',
-      'Take the photo on-site, then transfer it to this device',
-      'Upload the original file — do not screenshot or re-save it',
-    ],
-    videoUrl: "https://www.youtube.com/watch?v=TpCeOkw2QdY",
-    videoLabel: "Watch tutorial on YouTube (Android & iOS)",
-  },
-};
 
 function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<"upload" | "form">("upload");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [gpsError, setGpsError] = useState<boolean>(false);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [reporterName, setReporterName] = useState("");
   const [severity, setSeverity] = useState<"low" | "medium" | "high">("low");
   const [notes, setNotes] = useState("");
@@ -1200,28 +1165,13 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setGpsError(false);
+    setLocationDenied(false);
     setErrorMsg(null);
     setGpsCoords(null);
     setImageUrl(null);
+    setIsLocating(true);
 
     try {
-      const exifr = (await import("exifr")).default;
-      const gps = await exifr.gps(file);
-      if (!gps || gps.latitude == null || gps.longitude == null) {
-        setGpsError(true);
-        return;
-      }
-      const coords = { lat: gps.latitude, lng: gps.longitude };
-      setGpsCoords(coords);
-
-      fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}&zoom=18&addressdetails=1`
-      )
-        .then((r) => r.json())
-        .then((data) => setAddress(data.display_name || "Unknown Location"))
-        .catch(() => setAddress("Unknown Location"));
-
       const isHeic = file.type === "image/heic" || file.type === "image/heif"
         || file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif");
 
@@ -1232,30 +1182,60 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
         renderBlob = Array.isArray(converted) ? converted[0] : converted;
       }
 
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const MAX = 800;
-          let w = img.width, h = img.height;
-          if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-          else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-          canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, w, h);
-            const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
-            if (dataUrl.length > 800000) { setErrorMsg("Image is too large after compression."); return; }
-            setImageUrl(dataUrl);
-            setStep("form");
-          }
-        };
-        if (ev.target?.result) img.src = ev.target.result as string;
-      };
-      reader.readAsDataURL(renderBlob);
-    } catch {
-      setGpsError(true);
+      const [dataUrl, coords] = await Promise.all([
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              const MAX = 800;
+              let w = img.width, h = img.height;
+              if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+              else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+              canvas.width = w; canvas.height = h;
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, w, h);
+                const url = canvas.toDataURL("image/jpeg", 0.6);
+                if (url.length > 800000) { reject(new Error("too_large")); return; }
+                resolve(url);
+              }
+            };
+            img.onerror = () => reject(new Error("img_load"));
+            if (ev.target?.result) img.src = ev.target.result as string;
+          };
+          reader.readAsDataURL(renderBlob);
+        }),
+        new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+          if (!navigator.geolocation) { reject(new Error("no_geolocation")); return; }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          );
+        }),
+      ]);
+
+      setImageUrl(dataUrl);
+      setGpsCoords(coords);
+
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}&zoom=18&addressdetails=1`)
+        .then((r) => r.json())
+        .then((data) => setAddress(data.display_name || "Unknown Location"))
+        .catch(() => setAddress("Unknown Location"));
+
+      setStep("form");
+    } catch (err: any) {
+      if (err?.code === 1 || err?.message === "no_geolocation") {
+        setLocationDenied(true);
+      } else if (err?.message === "too_large") {
+        setErrorMsg("Image is too large after compression.");
+      } else {
+        setErrorMsg("Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsLocating(false);
     }
   };
 
@@ -1335,7 +1315,7 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
             <div className="flex flex-col gap-1">
               <div className="text-sm font-bold text-white/80">Take a photo of the pothole</div>
               <p className="text-[11px] text-white/40 leading-relaxed">
-                Point your camera at the pothole and take a photo. GPS coordinates will be read from the photo — make sure location is enabled for your camera.
+                Point your camera at the pothole and take a photo. Your browser will ask for location permission — allow it so we can pin the exact spot.
               </p>
             </div>
             <button
@@ -1346,46 +1326,66 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
               <span>Open Camera</span>
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
-            {errorMsg && !gpsError && (
+            {isLocating && (
+              <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-white/50">
+                <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                Getting your location…
+              </div>
+            )}
+            {errorMsg && (
               <div className="flex flex-col gap-2 bg-orange-500/10 border border-orange-500/30 rounded p-3">
-                <p className="text-[11px] text-orange-400 font-bold">Photo rejected</p>
-                <p className="text-[11px] text-white/60 leading-relaxed">{errorMsg}</p>
+                <p className="text-[11px] text-orange-400 font-bold">{errorMsg}</p>
                 <button
                   onClick={() => { setErrorMsg(null); fileInputRef.current?.click(); }}
                   className="mt-1 w-full py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 text-white/50 hover:text-white/80 hover:border-white/40 transition-colors rounded"
                 >
-                  Try another photo
+                  Try again
                 </button>
               </div>
             )}
-            {gpsError && (() => {
+            {locationDenied && (() => {
               const platform = getGeotagPlatform();
-              const { title, steps, videoUrl, videoLabel } = GEOTAG_INSTRUCTIONS[platform];
+              const instructions: Record<"ios" | "android" | "other", { title: string; steps: string[] }> = {
+                ios: {
+                  title: "Enable location for Safari on iPhone",
+                  steps: [
+                    "Open Settings → Safari → Location",
+                    'Set to "While Using the App" or "Ask"',
+                    "Come back here and try again",
+                  ],
+                },
+                android: {
+                  title: "Enable location for your browser",
+                  steps: [
+                    "Tap the lock icon in the browser address bar",
+                    'Tap "Permissions" → Location → Allow',
+                    "Come back here and try again",
+                  ],
+                },
+                other: {
+                  title: "Enable location in your browser",
+                  steps: [
+                    "Click the lock icon in the address bar",
+                    "Allow location access for this site",
+                    "Reload and try again",
+                  ],
+                },
+              };
+              const { title, steps } = instructions[platform];
               return (
                 <div className="flex flex-col gap-2 bg-red-500/10 border border-red-500/30 rounded p-3">
-                  <p className="text-[11px] text-red-400 font-bold">No GPS data found in this photo.</p>
+                  <p className="text-[11px] text-red-400 font-bold">Location permission denied.</p>
                   <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest">{title}</p>
                   <ol className="flex flex-col gap-1.5 list-decimal list-inside">
                     {steps.map((s, i) => (
                       <li key={i} className="text-[11px] text-white/60 leading-relaxed">{s}</li>
                     ))}
                   </ol>
-                  {videoUrl && (
-                    <a
-                      href={videoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-[11px] text-red-400 hover:text-red-300 underline underline-offset-2 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>
-                      {videoLabel}
-                    </a>
-                  )}
                   <button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => { setLocationDenied(false); fileInputRef.current?.click(); }}
                     className="mt-1 w-full py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 text-white/50 hover:text-white/80 hover:border-white/40 transition-colors rounded"
                   >
-                    Try another photo
+                    Try again
                   </button>
                 </div>
               );
