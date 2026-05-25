@@ -16,7 +16,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
-import { db, loginWithGoogle, logout } from "../lib/firebase";
+import { db, loginWithGoogle, logout, loginAnonymously } from "../lib/firebase";
 import { fetchWithAppCheck } from "../lib/appcheck-fetch";
 import { initClarity } from "../lib/clarity";
 import { getConstituency } from "../lib/constituency";
@@ -39,7 +39,7 @@ import {
   arrayRemove,
   deleteField,
 } from "firebase/firestore";
-import { decode } from "@googlemaps/polyline-codec";
+import { decode, encode } from "@googlemaps/polyline-codec";
 import {
   Navigation,
   Plus,
@@ -690,6 +690,12 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                 </div>
               )}
 
+              {report.photoTakenAt && (
+                <div className="text-[10px] m-0 text-cyan-500/70 uppercase">
+                  <span className="text-cyan-500 font-bold mr-1">Photo:</span>
+                  {new Date(report.photoTakenAt.toDate?.() || report.photoTakenAt).toLocaleString()}
+                </div>
+              )}
               {report.createdAt && (
                 <div className="text-[10px] m-0 text-cyan-500/70 uppercase">
                   <span className="text-cyan-500 font-bold mr-1">Log:</span>
@@ -1082,7 +1088,7 @@ function SignInToVoteModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function SignInToReportModal({ onClose }: { onClose: () => void }) {
+function SignInToReportModal({ onClose, onAnonymous }: { onClose: () => void; onAnonymous: () => void }) {
   return (
     <>
       <div
@@ -1091,23 +1097,392 @@ function SignInToReportModal({ onClose }: { onClose: () => void }) {
       />
       <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-black/95 border border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="text-[9px] uppercase tracking-widest text-cyan-500/60">Sign in required</div>
+          <div className="text-[9px] uppercase tracking-widest text-cyan-500/60">How would you like to report?</div>
           <button onClick={onClose} className="text-cyan-500/40 hover:text-cyan-400 -mt-0.5">
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="flex flex-col gap-1">
           <div className="text-sm font-bold text-cyan-400">Report a pothole</div>
-          <p className="text-[11px] text-cyan-400/70 leading-relaxed">
-            Sign in to report potholes in your area. Your identity is only used to track your reports — it is never shared or displayed publicly.
-          </p>
         </div>
-        <button
-          onClick={() => { loginWithGoogle(); onClose(); }}
-          className="w-full py-2.5 text-[11px] font-bold uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 transition-colors rounded"
-        >
-          Sign in with Google
-        </button>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => { loginWithGoogle(); onClose(); }}
+            className="w-full py-3 text-[11px] font-bold uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 transition-colors rounded flex flex-col items-center gap-1"
+          >
+            <span>Sign in with Google</span>
+            <span className="text-[9px] font-normal normal-case tracking-normal text-cyan-400/50">Draw a road segment on the map</span>
+          </button>
+          <button
+            onClick={() => { onClose(); onAnonymous(); }}
+            className="w-full py-3 text-[11px] font-bold uppercase tracking-widest bg-white/5 border border-white/20 text-white/70 hover:bg-white/10 transition-colors rounded flex flex-col items-center gap-1"
+          >
+            <span>Continue Anonymously</span>
+            <span className="text-[9px] font-normal normal-case tracking-normal text-white/40">Upload a geotagged photo of the pothole</span>
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function getGeotagPlatform(): "ios" | "android" | "other" {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return "ios";
+  if (/Android/.test(ua)) return "android";
+  return "other";
+}
+
+const GEOTAG_INSTRUCTIONS: Record<"ios" | "android" | "other", { title: string; steps: string[]; videoUrl?: string; videoLabel?: string }> = {
+  ios: {
+    title: "Enable geotagging on iPhone / iPad",
+    steps: [
+      'Open Settings → Privacy & Security → Location Services',
+      'Find Camera in the list → set to "While Using the App"',
+      'Re-open the Camera app and take a new photo of the pothole',
+      'Upload that photo here',
+    ],
+    videoUrl: "https://www.youtube.com/watch?v=Vfq1eZP7r7g",
+    videoLabel: "Watch tutorial on YouTube",
+  },
+  android: {
+    title: "Enable geotagging on Android",
+    steps: [
+      'Open the Camera app',
+      'Tap the Settings icon (gear / three lines)',
+      'Find "Location tags", "GPS tag", or "Save location" → turn it On',
+      'Allow the Camera app to access location if prompted',
+      'Take a new photo of the pothole and upload it here',
+    ],
+    videoUrl: "https://www.youtube.com/watch?v=r6eEVL9XgXU",
+    videoLabel: "Watch tutorial on YouTube",
+  },
+  other: {
+    title: "How to get a geotagged photo",
+    steps: [
+      'Use your phone\'s default Camera app (not a third-party app)',
+      'Make sure location permission is granted to the Camera app',
+      'Take the photo on-site, then transfer it to this device',
+      'Upload the original file — do not screenshot or re-save it',
+    ],
+    videoUrl: "https://www.youtube.com/watch?v=TpCeOkw2QdY",
+    videoLabel: "Watch tutorial on YouTube (Android & iOS)",
+  },
+};
+
+function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<"upload" | "form">("upload");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsError, setGpsError] = useState<boolean>(false);
+  const [reporterName, setReporterName] = useState("");
+  const [severity, setSeverity] = useState<"low" | "medium" | "high">("low");
+  const [notes, setNotes] = useState("");
+  const [address, setAddress] = useState<string>("Locating...");
+  const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGpsError(false);
+    setErrorMsg(null);
+    setGpsCoords(null);
+    setImageUrl(null);
+    setPhotoTakenAt(null);
+
+    try {
+      const exifr = (await import("exifr")).default;
+      const parsed = await exifr.parse(file, { gps: true, exif: true } as any);
+
+      if (!(parsed?.DateTimeOriginal instanceof Date)) {
+        setErrorMsg("This photo has no date/time information. Please use a photo taken directly from your phone's camera app.");
+        return;
+      }
+
+      const takenAt: Date = parsed.DateTimeOriginal;
+      const ageMs = Date.now() - takenAt.getTime();
+      const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+      if (ageMs > MAX_AGE_MS) {
+        setErrorMsg(
+          `This photo was taken on ${takenAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} — more than 7 days ago. Please take a fresh photo of the pothole and upload it.`
+        );
+        return;
+      }
+      setPhotoTakenAt(takenAt);
+
+      const gps = parsed?.latitude != null ? parsed : await exifr.gps(file);
+      if (!gps || gps.latitude == null || gps.longitude == null) {
+        setGpsError(true);
+        return;
+      }
+      const coords = { lat: gps.latitude, lng: gps.longitude };
+      setGpsCoords(coords);
+
+      fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}&zoom=18&addressdetails=1`
+      )
+        .then((r) => r.json())
+        .then((data) => setAddress(data.display_name || "Unknown Location"))
+        .catch(() => setAddress("Unknown Location"));
+
+      const isHeic = file.type === "image/heic" || file.type === "image/heif"
+        || file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif");
+
+      let renderBlob: Blob = file;
+      if (isHeic) {
+        const heic2any = (await import("heic2any")).default;
+        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+        renderBlob = Array.isArray(converted) ? converted[0] : converted;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX = 800;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+          else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+            if (dataUrl.length > 800000) { setErrorMsg("Image is too large after compression."); return; }
+            setImageUrl(dataUrl);
+            setStep("form");
+          }
+        };
+        if (ev.target?.result) img.src = ev.target.result as string;
+      };
+      reader.readAsDataURL(renderBlob);
+    } catch {
+      setGpsError(true);
+    }
+  };
+
+  const submit = async () => {
+    if (!gpsCoords || !imageUrl) return;
+    setIsSubmitting(true);
+    setErrorMsg(null);
+    try {
+      await loginAnonymously();
+      const { auth: firebaseAuth } = await import("../lib/firebase");
+      const currentUser = firebaseAuth.currentUser;
+      if (!currentUser) throw new Error("Auth failed");
+
+      const pt: [number, number] = [gpsCoords.lat, gpsCoords.lng];
+      const tiny: [number, number][] = [
+        [pt[0] - 0.00005, pt[1] - 0.00005],
+        [pt[0] + 0.00005, pt[1] + 0.00005],
+      ];
+      const encodedPath = encode(tiny, 5);
+
+      const [constituency, roadInfo] = await Promise.all([
+        getConstituency(gpsCoords.lat, gpsCoords.lng),
+        fetchRoadClassification(gpsCoords.lat, gpsCoords.lng),
+      ]);
+
+      const payload: any = {
+        userId: currentUser.uid,
+        userName: reporterName.trim() || "Anonymous",
+        encodedPath,
+        createdAt: serverTimestamp(),
+        status: "reported",
+        severity,
+        address,
+        imageUrl,
+        upvoterIds: [],
+      };
+      if (notes.trim()) payload.notes = notes.trim();
+      if (photoTakenAt) payload.photoTakenAt = photoTakenAt;
+      if (constituency) {
+        payload.acName = constituency.acName;
+        payload.acNo = constituency.acNo;
+        payload.pcName = constituency.pcName;
+        if (constituency.lsgd) payload.lsgd = constituency.lsgd;
+        if (constituency.lsgdType) payload.lsgdType = constituency.lsgdType;
+        if (constituency.lsgdLabel) payload.lsgdLabel = constituency.lsgdLabel;
+        if (constituency.wardNo != null) payload.wardNo = constituency.wardNo;
+        if (constituency.wardName) payload.wardName = constituency.wardName;
+        if (constituency.secLsgCode) payload.secLsgCode = constituency.secLsgCode;
+      }
+      if (roadInfo) {
+        payload.highwayTag = roadInfo.highwayTag;
+        payload.roadAuthority = roadInfo.roadAuthority;
+      }
+
+      await addDoc(collection(db, "potholes"), payload);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      setErrorMsg("Failed to submit. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[2600] bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(360px,92vw)] bg-black/95 border border-white/20 rounded-xl font-mono shadow-[0_0_40px_rgba(255,255,255,0.05)] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-start justify-between gap-2">
+          <div className="text-[9px] uppercase tracking-widest text-white/40">Anonymous Report</div>
+          <button onClick={onClose} className="text-white/30 hover:text-white/60 -mt-0.5">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {step === "upload" && (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <div className="text-sm font-bold text-white/80">Upload a geotagged photo</div>
+              <p className="text-[11px] text-white/40 leading-relaxed">
+                Take a photo of the pothole with your phone&apos;s camera app (with location enabled). The GPS coordinates will be read from the photo.
+              </p>
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-4 border border-dashed border-white/30 text-white/50 hover:text-white/80 hover:border-white/50 transition-colors rounded flex flex-col items-center gap-2 text-[11px]"
+            >
+              <Camera className="w-6 h-6" />
+              <span>Choose Photo</span>
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+            {errorMsg && !gpsError && (
+              <div className="flex flex-col gap-2 bg-orange-500/10 border border-orange-500/30 rounded p-3">
+                <p className="text-[11px] text-orange-400 font-bold">Photo rejected</p>
+                <p className="text-[11px] text-white/60 leading-relaxed">{errorMsg}</p>
+                <button
+                  onClick={() => { setErrorMsg(null); fileInputRef.current?.click(); }}
+                  className="mt-1 w-full py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 text-white/50 hover:text-white/80 hover:border-white/40 transition-colors rounded"
+                >
+                  Try another photo
+                </button>
+              </div>
+            )}
+            {gpsError && (() => {
+              const platform = getGeotagPlatform();
+              const { title, steps, videoUrl, videoLabel } = GEOTAG_INSTRUCTIONS[platform];
+              return (
+                <div className="flex flex-col gap-2 bg-red-500/10 border border-red-500/30 rounded p-3">
+                  <p className="text-[11px] text-red-400 font-bold">No GPS data found in this photo.</p>
+                  <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest">{title}</p>
+                  <ol className="flex flex-col gap-1.5 list-decimal list-inside">
+                    {steps.map((s, i) => (
+                      <li key={i} className="text-[11px] text-white/60 leading-relaxed">{s}</li>
+                    ))}
+                  </ol>
+                  {videoUrl && (
+                    <a
+                      href={videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-[11px] text-red-400 hover:text-red-300 underline underline-offset-2 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>
+                      {videoLabel}
+                    </a>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-1 w-full py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 text-white/50 hover:text-white/80 hover:border-white/40 transition-colors rounded"
+                  >
+                    Try another photo
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {step === "form" && imageUrl && gpsCoords && (
+          <div className="flex flex-col gap-4">
+            <img src={imageUrl} alt="Pothole" className="w-full rounded object-cover max-h-40" />
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Location</label>
+              <p className="text-[10px] text-white/60 bg-white/5 border border-white/10 p-2 rounded break-words">{address}</p>
+            </div>
+
+            {photoTakenAt && (
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Photo Taken</label>
+                <p className="text-[10px] text-white/60 bg-white/5 border border-white/10 p-2 rounded">
+                  {photoTakenAt.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Reporting As (optional)</label>
+              <input
+                type="text"
+                value={reporterName}
+                onChange={(e) => setReporterName(e.target.value.slice(0, 50))}
+                placeholder="Anonymous"
+                className="text-[11px] text-white/80 bg-white/5 border border-white/20 p-2 rounded placeholder:text-white/20 outline-none focus:border-white/40"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Severity</label>
+              <div className="flex gap-2">
+                {(["low", "medium", "high"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSeverity(s)}
+                    className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all rounded ${
+                      severity === s
+                        ? s === "low" ? "bg-[#00f0ff] text-black border-[#00f0ff] shadow-[0_0_10px_#00f0ff]"
+                          : s === "medium" ? "bg-[#ff9900] text-black border-[#ff9900] shadow-[0_0_10px_#ff9900]"
+                          : "bg-[#ff003c] text-black border-[#ff003c] shadow-[0_0_10px_#ff003c]"
+                        : s === "low" ? "bg-black text-[#00f0ff] border-[#00f0ff]/40"
+                          : s === "medium" ? "bg-black text-[#ff9900] border-[#ff9900]/40"
+                          : "bg-black text-[#ff003c] border-[#ff003c]/40"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Notes (optional)</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                placeholder="Describe the pothole..."
+                rows={2}
+                className="text-[11px] text-white/80 bg-white/5 border border-white/20 p-2 rounded placeholder:text-white/20 outline-none focus:border-white/40 resize-none"
+              />
+            </div>
+
+            {errorMsg && <p className="text-[11px] text-red-400">{errorMsg}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep("upload")}
+                className="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 text-white/40 hover:text-white/70 hover:border-white/40 transition-colors rounded"
+              >
+                Back
+              </button>
+              <button
+                onClick={submit}
+                disabled={isSubmitting}
+                className="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest bg-white/10 border border-white/30 text-white/80 hover:bg-white/20 transition-colors rounded disabled:opacity-40"
+              >
+                {isSubmitting ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -1510,11 +1885,15 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                 <div className="text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
               </div>
               <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">
+                  {report.photoTakenAt ? "Photo Date" : "Date"}
+                </div>
                 <div className="text-cyan-300 font-bold">
-                  {report.createdAt
-                    ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-                    : "—"}
+                  {report.photoTakenAt
+                    ? new Date(report.photoTakenAt.toDate?.() || report.photoTakenAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                    : report.createdAt
+                      ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                      : "—"}
                 </div>
               </div>
               {report.district && (
@@ -1667,6 +2046,7 @@ function ReportingOverlay({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDesktopHovered, setIsDesktopHovered] = useState(false);
   const [showSignInReportPrompt, setShowSignInReportPrompt] = useState(false);
+  const [showGeoPhotoModal, setShowGeoPhotoModal] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1868,7 +2248,13 @@ function ReportingOverlay({
           </div>
         </div>
         {showSignInReportPrompt && (
-          <SignInToReportModal onClose={() => setShowSignInReportPrompt(false)} />
+          <SignInToReportModal
+            onClose={() => setShowSignInReportPrompt(false)}
+            onAnonymous={() => { setShowSignInReportPrompt(false); setShowGeoPhotoModal(true); }}
+          />
+        )}
+        {showGeoPhotoModal && (
+          <GeoPhotoReportModal onClose={() => setShowGeoPhotoModal(false)} />
         )}
       </>
     );
