@@ -1301,11 +1301,11 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[2600] bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(360px,92vw)] bg-black/95 border border-white/20 rounded-xl font-mono shadow-[0_0_40px_rgba(255,255,255,0.05)] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 z-[2600] bg-black/50 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(360px,92vw)] bg-white/98 dark:bg-black/95 border border-blue-200 dark:border-white/20 rounded-xl font-mono shadow-[0_4px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_0_40px_rgba(255,255,255,0.05)] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between gap-2">
-          <div className="text-[9px] uppercase tracking-widest text-white/40">Anonymous Report</div>
-          <button onClick={onClose} className="text-white/30 hover:text-white/60 -mt-0.5">
+          <div className="text-[9px] uppercase tracking-widest text-blue-500/70 dark:text-white/40">Anonymous Report</div>
+          <button onClick={onClose} className="text-blue-400/60 dark:text-white/30 hover:text-blue-700 dark:hover:text-white/60 -mt-0.5">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -1313,31 +1313,31 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
         {step === "upload" && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <div className="text-sm font-bold text-white/80">Take a photo of the pothole</div>
-              <p className="text-[11px] text-white/40 leading-relaxed">
+              <div className="text-sm font-bold text-blue-800 dark:text-white/80">Take a photo of the pothole</div>
+              <p className="text-[11px] text-blue-600/70 dark:text-white/40 leading-relaxed">
                 Point your camera at the pothole and take a photo. Your browser will ask for location permission — allow it so we can pin the exact spot.
               </p>
             </div>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full py-4 border border-dashed border-white/30 text-white/50 hover:text-white/80 hover:border-white/50 transition-colors rounded flex flex-col items-center gap-2 text-[11px]"
+              className="w-full py-4 border border-dashed border-blue-300 dark:border-white/30 text-blue-500 dark:text-white/50 hover:text-blue-700 dark:hover:text-white/80 hover:border-blue-400 dark:hover:border-white/50 transition-colors rounded flex flex-col items-center gap-2 text-[11px]"
             >
               <Camera className="w-6 h-6" />
               <span>Open Camera</span>
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
             {isLocating && (
-              <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-white/50">
+              <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-blue-500 dark:text-white/50">
                 <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
                 Getting your location…
               </div>
             )}
             {errorMsg && (
               <div className="flex flex-col gap-2 bg-orange-500/10 border border-orange-500/30 rounded p-3">
-                <p className="text-[11px] text-orange-400 font-bold">{errorMsg}</p>
+                <p className="text-[11px] text-orange-500 dark:text-orange-400 font-bold">{errorMsg}</p>
                 <button
                   onClick={() => { setErrorMsg(null); fileInputRef.current?.click(); }}
-                  className="mt-1 w-full py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 text-white/50 hover:text-white/80 hover:border-white/40 transition-colors rounded"
+                  className="mt-1 w-full py-2 text-[10px] font-bold uppercase tracking-widest border border-blue-300 dark:border-white/20 text-blue-500 dark:text-white/50 hover:text-blue-700 dark:hover:text-white/80 hover:border-blue-400 dark:hover:border-white/40 transition-colors rounded"
                 >
                   Try again
                 </button>
@@ -1374,16 +1374,16 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
               const { title, steps } = instructions[platform];
               return (
                 <div className="flex flex-col gap-2 bg-red-500/10 border border-red-500/30 rounded p-3">
-                  <p className="text-[11px] text-red-400 font-bold">Location permission denied.</p>
-                  <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest">{title}</p>
+                  <p className="text-[11px] text-red-500 dark:text-red-400 font-bold">Location permission denied.</p>
+                  <p className="text-[10px] text-blue-600/70 dark:text-white/50 font-bold uppercase tracking-widest">{title}</p>
                   <ol className="flex flex-col gap-1.5 list-decimal list-inside">
                     {steps.map((s, i) => (
-                      <li key={i} className="text-[11px] text-white/60 leading-relaxed">{s}</li>
+                      <li key={i} className="text-[11px] text-blue-700/80 dark:text-white/60 leading-relaxed">{s}</li>
                     ))}
                   </ol>
                   <button
                     onClick={() => { setLocationDenied(false); fileInputRef.current?.click(); }}
-                    className="mt-1 w-full py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 text-white/50 hover:text-white/80 hover:border-white/40 transition-colors rounded"
+                    className="mt-1 w-full py-2 text-[10px] font-bold uppercase tracking-widest border border-blue-300 dark:border-white/20 text-blue-500 dark:text-white/50 hover:text-blue-700 dark:hover:text-white/80 hover:border-blue-400 dark:hover:border-white/40 transition-colors rounded"
                   >
                     Try again
                   </button>
@@ -1398,24 +1398,23 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
             <img src={imageUrl} alt="Pothole" className="w-full rounded object-cover max-h-40" />
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Location</label>
-              <p className="text-[10px] text-white/60 bg-white/5 border border-white/10 p-2 rounded break-words">{address}</p>
+              <label className="text-[10px] uppercase font-bold tracking-widest text-blue-500/70 dark:text-white/40 border-l-2 border-blue-300 dark:border-white/30 pl-2">Location</label>
+              <p className="text-[10px] text-blue-700 dark:text-white/60 bg-blue-50 dark:bg-white/5 border border-blue-200 dark:border-white/10 p-2 rounded break-words">{address}</p>
             </div>
 
-
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Reporting As (optional)</label>
+              <label className="text-[10px] uppercase font-bold tracking-widest text-blue-500/70 dark:text-white/40 border-l-2 border-blue-300 dark:border-white/30 pl-2">Reporting As (optional)</label>
               <input
                 type="text"
                 value={reporterName}
                 onChange={(e) => setReporterName(e.target.value.slice(0, 50))}
                 placeholder="Anonymous"
-                className="text-[11px] text-white/80 bg-white/5 border border-white/20 p-2 rounded placeholder:text-white/20 outline-none focus:border-white/40"
+                className="text-[11px] text-blue-800 dark:text-white/80 bg-blue-50 dark:bg-white/5 border border-blue-200 dark:border-white/20 p-2 rounded placeholder:text-blue-400/50 dark:placeholder:text-white/20 outline-none focus:border-blue-400 dark:focus:border-white/40"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Severity</label>
+              <label className="text-[10px] uppercase font-bold tracking-widest text-blue-500/70 dark:text-white/40 border-l-2 border-blue-300 dark:border-white/30 pl-2">Severity</label>
               <div className="flex gap-2">
                 {(["low", "medium", "high"] as const).map((s) => (
                   <button
@@ -1423,12 +1422,12 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
                     onClick={() => setSeverity(s)}
                     className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all rounded ${
                       severity === s
-                        ? s === "low" ? "bg-[#00f0ff] text-black border-[#00f0ff] shadow-[0_0_10px_#00f0ff]"
-                          : s === "medium" ? "bg-[#ff9900] text-black border-[#ff9900] shadow-[0_0_10px_#ff9900]"
-                          : "bg-[#ff003c] text-black border-[#ff003c] shadow-[0_0_10px_#ff003c]"
-                        : s === "low" ? "bg-black text-[#00f0ff] border-[#00f0ff]/40"
-                          : s === "medium" ? "bg-black text-[#ff9900] border-[#ff9900]/40"
-                          : "bg-black text-[#ff003c] border-[#ff003c]/40"
+                        ? s === "low" ? "bg-[#00b4c8] dark:bg-[#00f0ff] text-black border-[#00b4c8] dark:border-[#00f0ff] dark:shadow-[0_0_10px_#00f0ff]"
+                          : s === "medium" ? "bg-[#ff9900] text-black border-[#ff9900] dark:shadow-[0_0_10px_#ff9900]"
+                          : "bg-[#ff003c] text-white dark:text-black border-[#ff003c] dark:shadow-[0_0_10px_#ff003c]"
+                        : s === "low" ? "bg-transparent text-[#00889a] dark:text-[#00f0ff] border-[#00889a]/50 dark:border-[#00f0ff]/40"
+                          : s === "medium" ? "bg-transparent text-[#cc7700] dark:text-[#ff9900] border-[#cc7700]/50 dark:border-[#ff9900]/40"
+                          : "bg-transparent text-[#cc002e] dark:text-[#ff003c] border-[#cc002e]/50 dark:border-[#ff003c]/40"
                     }`}
                   >
                     {s}
@@ -1438,29 +1437,29 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Notes (optional)</label>
+              <label className="text-[10px] uppercase font-bold tracking-widest text-blue-500/70 dark:text-white/40 border-l-2 border-blue-300 dark:border-white/30 pl-2">Notes (optional)</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value.slice(0, 500))}
                 placeholder="Describe the pothole..."
                 rows={2}
-                className="text-[11px] text-white/80 bg-white/5 border border-white/20 p-2 rounded placeholder:text-white/20 outline-none focus:border-white/40 resize-none"
+                className="text-[11px] text-blue-800 dark:text-white/80 bg-blue-50 dark:bg-white/5 border border-blue-200 dark:border-white/20 p-2 rounded placeholder:text-blue-400/50 dark:placeholder:text-white/20 outline-none focus:border-blue-400 dark:focus:border-white/40 resize-none"
               />
             </div>
 
-            {errorMsg && <p className="text-[11px] text-red-400">{errorMsg}</p>}
+            {errorMsg && <p className="text-[11px] text-red-500 dark:text-red-400">{errorMsg}</p>}
 
             <div className="flex gap-2">
               <button
                 onClick={() => setStep("upload")}
-                className="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 text-white/40 hover:text-white/70 hover:border-white/40 transition-colors rounded"
+                className="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-blue-300 dark:border-white/20 text-blue-500 dark:text-white/40 hover:text-blue-700 dark:hover:text-white/70 hover:border-blue-400 dark:hover:border-white/40 transition-colors rounded"
               >
                 Back
               </button>
               <button
                 onClick={submit}
                 disabled={isSubmitting}
-                className="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest bg-white/10 border border-white/30 text-white/80 hover:bg-white/20 transition-colors rounded disabled:opacity-40"
+                className="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest bg-blue-600 dark:bg-white/10 border border-blue-600 dark:border-white/30 text-white dark:text-white/80 hover:bg-blue-700 dark:hover:bg-white/20 transition-colors rounded disabled:opacity-40"
               >
                 {isSubmitting ? "Submitting..." : "Submit Report"}
               </button>
