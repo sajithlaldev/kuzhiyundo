@@ -60,8 +60,10 @@ import {
   Copy,
   Bug,
   ExternalLink,
+  Sun,
+  Moon,
 } from "lucide-react";
-
+import { useTheme } from "next-themes";
 // Fix default marker icon issues in Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -97,6 +99,10 @@ export default function LeafletPotholeMap() {
   const [pendingDeepLinkId, setPendingDeepLinkId] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => setMounted(true), []);
 
   // Reporting state
   const [reportingMode, setReportingMode] = useState(false);
@@ -181,18 +187,21 @@ export default function LeafletPotholeMap() {
   };
 
   return (
-    <div className="relative w-full h-app bg-neutral-900 overflow-hidden">
+    <div className="relative w-full h-app bg-neutral-100 dark:bg-neutral-900 overflow-hidden">
       <MapContainer
         center={[10.8505, 76.2711]}
         zoom={7}
-        style={{ width: "100%", height: "100%", background: "#0f172a" }}
+        style={{ width: "100%", height: "100%", background: mounted && theme === 'light' ? '#f1f5f9' : '#0f172a' }}
         attributionControl={false}
         zoomControl={false}
       >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        />
+        {mounted && (
+          <TileLayer
+            key={theme}
+            url={theme === 'light' ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"}
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          />
+        )}
 
         <MapEventsHandler
           reportingMode={reportingMode}
@@ -242,6 +251,16 @@ export default function LeafletPotholeMap() {
         />
 
         <MapSearch />
+        
+        {mounted && (
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="absolute bottom-16 right-4 z-[1000] p-2 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md text-blue-700 dark:text-cyan-400 hover:bg-neutral-100 dark:hover:bg-blue-100/40 dark:bg-cyan-900/40 transition-all"
+            title="Toggle Theme"
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+        )}
       </MapContainer>
       <ReportsMarquee reports={reports} />
     </div>
@@ -253,7 +272,7 @@ function ReportsMarquee({ reports }: { reports: any[] }) {
   const latestReports = reports.slice(0, 5);
 
   const MarqueeItem = ({ report }: { report: any }) => (
-    <div className="flex items-center shrink-0 whitespace-nowrap gap-2 mx-8 text-cyan-400 text-[10px] uppercase tracking-widest">
+    <div className="flex items-center shrink-0 whitespace-nowrap gap-2 mx-8 text-blue-700 dark:text-cyan-400 text-[10px] uppercase tracking-widest">
       <span
         className="w-2 h-2 rounded-full"
         style={{
@@ -264,7 +283,7 @@ function ReportsMarquee({ reports }: { reports: any[] }) {
       <span className="font-bold truncate max-w-[200px]">
         {report.address || "Unknown Location"}
       </span>
-      <span className="text-cyan-500/50">
+      <span className="text-blue-500/70 dark:text-cyan-500/50">
         (
         {new Date(
           report.createdAt?.toDate?.() || report.createdAt || Date.now(),
@@ -275,7 +294,7 @@ function ReportsMarquee({ reports }: { reports: any[] }) {
   );
 
   return (
-    <div className="absolute bottom-0 left-0 w-full bg-black/90 border-t border-cyan-500/50 pt-2.5 z-[2000] overflow-hidden font-mono flex pointer-events-none" style={{ paddingBottom: "max(0.625rem, var(--sab))" }}>
+    <div className="absolute bottom-0 left-0 w-full bg-white/90 dark:bg-black/90 border-t border-blue-500/30 dark:border-cyan-500/50 pt-2.5 z-[2000] overflow-hidden font-mono flex pointer-events-none" style={{ paddingBottom: "max(0.625rem, var(--sab))" }}>
       <div className="flex animate-marquee shrink-0 items-center justify-around min-w-full">
         {latestReports.map((report) => (
           <MarqueeItem key={`mq1-${report.id}`} report={report} />
@@ -612,18 +631,18 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
 
     return (
       <Popup className="futuristic-popup">
-        <div className="flex flex-col gap-1 font-mono min-w-[180px] sm:min-w-[200px] bg-black/90 text-cyan-400 p-1.5 border border-cyan-500/30">
-          <h3 className="font-bold text-[10px] uppercase tracking-widest border-b border-cyan-500/30 pb-0.5 m-0 flex justify-between items-center pr-4">
+        <div className="flex flex-col gap-1 font-mono min-w-[180px] sm:min-w-[200px] bg-white/95 dark:bg-black/90 text-blue-800 dark:text-cyan-400 p-1.5 border border-blue-200 dark:border-cyan-500/30">
+          <h3 className="font-bold text-[10px] uppercase tracking-widest border-b border-blue-200 dark:border-cyan-500/30 pb-0.5 m-0 flex justify-between items-center pr-4">
             <span>Kuzhi Detected</span>
             <div className="flex gap-2">
               {(upvoteCount > 0 || downvoteCount > 0) && (
                 <span
-                  className={`flex items-center gap-0.5 text-[8px] ${upvoteCount - downvoteCount < 0 ? "text-red-500" : "text-cyan-400"}`}
+                  className={`flex items-center gap-0.5 text-[8px] ${upvoteCount - downvoteCount < 0 ? "text-red-500" : "text-blue-700 dark:text-cyan-400"}`}
                 >
                   {upvoteCount - downvoteCount < 0 ? (
                     <ThumbsDown className="w-2 h-2 fill-red-500" />
                   ) : (
-                    <ThumbsUp className="w-2 h-2 fill-cyan-400" />
+                    <ThumbsUp className="w-2 h-2 fill-blue-700 dark:fill-cyan-400" />
                   )}
                   {upvoteCount - downvoteCount}
                 </span>
@@ -634,7 +653,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
           {editingId !== report.id && (
             <>
               {report.imageUrl && (
-                <div className="w-full h-12 mt-0.5 border border-cyan-500/30 object-cover overflow-hidden">
+                <div className="w-full h-12 mt-0.5 border border-blue-200 dark:border-cyan-500/30 object-cover overflow-hidden">
                   <img
                     src={report.imageUrl}
                     alt="Pothole"
@@ -643,8 +662,8 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                 </div>
               )}
 
-              <div className="text-[9px] m-0 text-cyan-500/70 uppercase leading-tight line-clamp-1">
-                <span className="text-cyan-500 font-bold inline mr-1">
+              <div className="text-[9px] m-0 text-blue-600/80 dark:text-cyan-500/70 uppercase leading-tight line-clamp-1">
+                <span className="text-blue-700 dark:text-cyan-500 font-bold inline mr-1">
                   Loc:
                 </span>
                 {report.district ? `${report.district} - ` : ""}
@@ -657,13 +676,13 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                 return (
                   <div className="text-[9px] m-0 uppercase leading-tight border-l-2 pl-1 flex flex-col gap-0.5" style={{ borderColor: auth.color + "80" }}>
                     <span style={{ color: auth.color }}><span className="font-bold">Auth:</span> {auth.label}</span>
-                    <span className="text-cyan-500/60">→ {label}</span>
+                    <span className="text-blue-500/80 dark:text-cyan-500/60">→ {label}</span>
                   </div>
                 );
               })() : (() => {
                 const ac = report.acName ? report : constituencyMap[report.id];
                 if (ac === undefined) return (
-                  <div className="text-[9px] text-cyan-500/40 italic">loading…</div>
+                  <div className="text-[9px] text-blue-400 dark:text-cyan-500/40 italic">loading…</div>
                 );
                 if (!ac) return null;
                 return (
@@ -674,8 +693,8 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                 );
               })()}
 
-              <div className="text-[9px] m-0 text-cyan-500/70 uppercase leading-tight flex overflow-hidden">
-                <span className="text-cyan-500 font-bold inline mr-1 shrink-0">
+              <div className="text-[9px] m-0 text-blue-600/80 dark:text-cyan-500/70 uppercase leading-tight flex overflow-hidden">
+                <span className="text-blue-700 dark:text-cyan-500 font-bold inline mr-1 shrink-0">
                   By:
                 </span>
                 <span className="truncate">
@@ -685,14 +704,14 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
               </div>
 
               {report.notes && (
-                <div className="text-[9px] m-0 text-cyan-400 break-words border-l border-cyan-500/50 pl-1 leading-tight line-clamp-2">
+                <div className="text-[9px] m-0 text-blue-800 dark:text-cyan-400 break-words border-l border-blue-400 dark:border-cyan-500/50 pl-1 leading-tight line-clamp-2">
                   "{report.notes}"
                 </div>
               )}
 
               {report.createdAt && (
-                <div className="text-[10px] m-0 text-cyan-500/70 uppercase">
-                  <span className="text-cyan-500 font-bold mr-1">Log:</span>
+                <div className="text-[10px] m-0 text-blue-600/80 dark:text-cyan-500/70 uppercase">
+                  <span className="text-blue-700 dark:text-cyan-500 font-bold mr-1">Log:</span>
                   {new Date(
                     report.createdAt.toDate?.() || report.createdAt,
                   ).toLocaleString()}
@@ -700,7 +719,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
               )}
               <div className="flex justify-between items-center mt-1">
                 <div className="flex gap-2">
-                  <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-bold border border-cyan-500/50 text-cyan-400">
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-bold border border-blue-400 dark:border-cyan-500/50 text-blue-700 dark:text-cyan-400">
                     {report.status?.toUpperCase() || "REPORTED"}
                   </span>
                   <span
@@ -720,11 +739,11 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                       e.stopPropagation();
                       handleVote(report.id, "up", upvoters, downvoters);
                     }}
-                    className={`flex items-center gap-1 p-1 rounded-sm border transition-all text-[10px] font-bold ${hasUpvoted ? "border-cyan-400 bg-cyan-900/50 text-cyan-400" : "border-transparent text-cyan-500/50 hover:bg-cyan-900/30 hover:text-cyan-400"}`}
+                    className={`flex items-center gap-1 p-1 rounded-sm border transition-all text-[10px] font-bold ${hasUpvoted ? "border-blue-600 dark:border-cyan-400 bg-blue-100 dark:bg-cyan-900/50 text-blue-700 dark:text-cyan-400" : "border-transparent text-blue-500/70 dark:text-cyan-500/50 hover:bg-blue-100 dark:hover:bg-blue-100/30 dark:bg-cyan-900/30 hover:text-blue-700 dark:hover:text-blue-600 dark:text-cyan-400"}`}
                     title="Upvote"
                   >
                     <ThumbsUp
-                      className={`w-3 h-3 ${hasUpvoted ? "fill-cyan-400" : ""}`}
+                      className={`w-3 h-3 ${hasUpvoted ? "fill-blue-700 dark:fill-cyan-400" : ""}`}
                     />
                   </button>
                   <button
@@ -732,7 +751,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                       e.stopPropagation();
                       handleVote(report.id, "down", upvoters, downvoters);
                     }}
-                    className={`flex items-center gap-1 p-1 rounded-sm border transition-all text-[10px] font-bold ${hasDownvoted ? "border-red-500 bg-red-900/50 text-red-500" : "border-transparent text-cyan-500/50 hover:bg-red-900/30 hover:text-red-500"}`}
+                    className={`flex items-center gap-1 p-1 rounded-sm border transition-all text-[10px] font-bold ${hasDownvoted ? "border-red-500 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-500" : "border-transparent text-blue-500/70 dark:text-cyan-500/50 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-500"}`}
                     title="Downvote"
                   >
                     <ThumbsDown
@@ -747,7 +766,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                   e.stopPropagation();
                   setDetailReportId(report.id);
                 }}
-                className="w-full mt-1 py-1.5 text-[9px] font-bold uppercase tracking-widest text-cyan-300 bg-cyan-900/40 hover:bg-cyan-800/60 border-t border-cyan-400/40 hover:border-cyan-400 shadow-[0_0_6px_rgba(0,255,255,0.15)] hover:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition-all"
+                className="w-full mt-1 py-1.5 text-[9px] font-bold uppercase tracking-widest text-blue-700 dark:text-cyan-300 bg-blue-100 dark:bg-cyan-900/40 hover:bg-blue-200 dark:hover:bg-blue-50/60 dark:bg-cyan-800/60 border-t border-blue-300 dark:border-cyan-400/40 hover:border-blue-400 dark:hover:border-blue-400 dark:border-cyan-400 shadow-[0_0_6px_rgba(0,100,255,0.1)] dark:shadow-[0_0_6px_rgba(0,255,255,0.15)] hover:shadow-[0_0_10px_rgba(0,100,255,0.2)] dark:hover:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition-all"
               >
                 View Details ↓
               </button>
@@ -756,7 +775,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
 
           {user?.uid === report.userId &&
             (deletingId === report.id ? (
-              <div className="mt-2 flex flex-col items-center gap-2 border-t pt-2 border-cyan-500/30">
+              <div className="mt-2 flex flex-col items-center gap-2 border-t pt-2 border-blue-500/30 dark:border-cyan-500/30">
                 <span className="text-[10px] uppercase font-bold text-red-500">
                   Delete Report?
                 </span>
@@ -772,16 +791,16 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                       e.stopPropagation();
                       setDeletingId(null);
                     }}
-                    className="flex-1 bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-400 border border-cyan-500/50 px-2 py-1 uppercase text-[10px] font-bold transition-colors"
+                    className="flex-1 bg-blue-100/50 dark:bg-cyan-900/50 hover:bg-blue-50/50 dark:bg-cyan-800/50 text-blue-600 dark:text-cyan-400 border border-blue-500/50 dark:border-cyan-500/50 px-2 py-1 uppercase text-[10px] font-bold transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
               </div>
             ) : editingId === report.id ? (
-              <div className="mt-2 flex flex-col items-start gap-2 border-t pt-2 border-cyan-500/30">
+              <div className="mt-2 flex flex-col items-start gap-2 border-t pt-2 border-blue-500/30 dark:border-cyan-500/30">
                 <div className="w-full">
-                  <label className="text-[10px] uppercase font-bold tracking-widest text-cyan-500/70 border-l-2 border-cyan-500 pl-2">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
                     Severity
                   </label>
                   <select
@@ -791,7 +810,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                         e.target.value as "low" | "medium" | "high",
                       )
                     }
-                    className="w-full bg-cyan-900/20 text-cyan-400 border border-cyan-500/50 p-1 mt-1 text-[10px] uppercase outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition-all"
+                    className="w-full bg-blue-100/20 dark:bg-cyan-900/20 text-blue-600 dark:text-cyan-400 border border-blue-500/50 dark:border-cyan-500/50 p-1 mt-1 text-[10px] uppercase outline-none focus:border-blue-400 dark:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition-all"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -799,18 +818,18 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                   </select>
                 </div>
                 <div className="w-full">
-                  <label className="text-[10px] uppercase font-bold tracking-widest text-cyan-500/70 border-l-2 border-cyan-500 pl-2">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
                     Notes
                   </label>
                   <textarea
                     value={editNotes}
                     onChange={(e) => setEditNotes(e.target.value)}
-                    className="w-full bg-cyan-900/20 text-cyan-400 border border-cyan-500/50 p-1 mt-1 text-[10px] uppercase outline-none min-h-[40px] resize-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition-all"
+                    className="w-full bg-blue-100/20 dark:bg-cyan-900/20 text-blue-600 dark:text-cyan-400 border border-blue-500/50 dark:border-cyan-500/50 p-1 mt-1 text-[10px] uppercase outline-none min-h-[40px] resize-none focus:border-blue-400 dark:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition-all"
                     placeholder="Update notes..."
                   />
                 </div>
                 <div className="w-full">
-                  <label className="text-[10px] uppercase font-bold tracking-widest text-cyan-500/70 border-l-2 border-cyan-500 pl-2">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
                     Image
                   </label>
                   <input
@@ -821,7 +840,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                     onChange={handleEditImageChange}
                   />
                   {editImageUrl ? (
-                    <div className="relative mt-1 border border-cyan-500/50 p-1 w-full max-h-20 overflow-hidden flex justify-center bg-black/50">
+                    <div className="relative mt-1 border border-blue-500/50 dark:border-cyan-500/50 p-1 w-full max-h-20 overflow-hidden flex justify-center bg-white/50 dark:bg-black/50">
                       <img
                         src={editImageUrl}
                         alt="edit preview"
@@ -833,7 +852,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                           e.preventDefault();
                           setEditImageUrl(null);
                         }}
-                        className="absolute top-1 right-1 bg-black/80 p-0.5 border border-cyan-500/50 text-cyan-400 hover:text-red-500"
+                        className="absolute top-1 right-1 bg-white/80 dark:bg-black/80 p-0.5 border border-blue-500/50 dark:border-cyan-500/50 text-blue-600 dark:text-cyan-400 hover:text-red-500"
                         type="button"
                       >
                         <X className="w-3 h-3" />
@@ -846,7 +865,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                         e.preventDefault();
                         editFileInputRef.current?.click();
                       }}
-                      className="mt-1 w-full border border-cyan-500/50 border-dashed text-cyan-500 p-1 text-[10px] hover:bg-cyan-900/30"
+                      className="mt-1 w-full border border-blue-500/50 dark:border-cyan-500/50 border-dashed text-blue-700 dark:text-cyan-500 p-1 text-[10px] hover:bg-blue-100/30 dark:bg-cyan-900/30"
                       type="button"
                     >
                       <Camera className="w-3 h-3 mx-auto" />
@@ -857,7 +876,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                   <button
                     onClick={(e) => handleSaveEdit(report.id, e)}
                     disabled={isSavingEdit}
-                    className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black px-2 py-1 uppercase text-[10px] font-bold transition-colors disabled:opacity-50"
+                    className="flex-1 bg-blue-50 dark:bg-cyan-500 hover:bg-blue-50 dark:bg-cyan-400 text-black px-2 py-1 uppercase text-[10px] font-bold transition-colors disabled:opacity-50"
                   >
                     Save
                   </button>
@@ -866,7 +885,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                       e.stopPropagation();
                       setEditingId(null);
                     }}
-                    className="flex-1 bg-cyan-900/50 hover:bg-cyan-800/50 text-cyan-400 border border-cyan-500/50 px-2 py-1 uppercase text-[10px] font-bold transition-colors"
+                    className="flex-1 bg-blue-100/50 dark:bg-cyan-900/50 hover:bg-blue-50/50 dark:bg-cyan-800/50 text-blue-600 dark:text-cyan-400 border border-blue-500/50 dark:border-cyan-500/50 px-2 py-1 uppercase text-[10px] font-bold transition-colors"
                   >
                     Cancel
                   </button>
@@ -882,7 +901,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                     setEditImageUrl(report.imageUrl || null);
                     setEditingId(report.id);
                   }}
-                  className="flex-1 flex items-center justify-center gap-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 px-2 py-1.5 text-[10px] uppercase tracking-widest font-bold transition-colors shadow-[0_0_10px_rgba(0,255,255,0.1)]"
+                  className="flex-1 flex items-center justify-center gap-1 bg-blue-50/10 dark:bg-cyan-500/10 hover:bg-blue-50/20 dark:bg-cyan-500/20 text-blue-600 dark:text-cyan-400 border border-blue-500/50 dark:border-cyan-500/50 px-2 py-1.5 text-[10px] uppercase tracking-widest font-bold transition-colors shadow-[0_0_10px_rgba(0,255,255,0.1)]"
                 >
                   Edit
                 </button>
@@ -1055,25 +1074,25 @@ function SignInToVoteModal({ onClose }: { onClose: () => void }) {
   return (
     <>
       <div
-        className="fixed inset-0 z-[2600] bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[2600] bg-white/60 dark:bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-black/95 border border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
+      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-white/95 dark:bg-black/95 border border-blue-500/40 dark:border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="text-[9px] uppercase tracking-widest text-cyan-500/60">Sign in required</div>
-          <button onClick={onClose} className="text-cyan-500/40 hover:text-cyan-400 -mt-0.5">
+          <div className="text-[9px] uppercase tracking-widest text-blue-700/60 dark:text-cyan-500/60">Sign in required</div>
+          <button onClick={onClose} className="text-blue-700/40 dark:text-cyan-500/40 hover:text-blue-600 dark:text-cyan-400 -mt-0.5">
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="flex flex-col gap-1">
-          <div className="text-sm font-bold text-cyan-400">Vote on reports</div>
-          <p className="text-[11px] text-cyan-400/70 leading-relaxed">
+          <div className="text-sm font-bold text-blue-600 dark:text-cyan-400">Vote on reports</div>
+          <p className="text-[11px] text-blue-600/70 dark:text-cyan-400/70 leading-relaxed">
             Sign in to confirm or dispute pothole reports. Your identity is only used to prevent duplicate votes — it is never shared or displayed publicly.
           </p>
         </div>
         <button
           onClick={() => { loginWithGoogle(); onClose(); }}
-          className="w-full py-2.5 text-[11px] font-bold uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 transition-colors rounded"
+          className="w-full py-2.5 text-[11px] font-bold uppercase tracking-widest bg-blue-50/10 dark:bg-cyan-500/10 border border-blue-500/50 dark:border-cyan-500/50 text-blue-600 dark:text-cyan-400 hover:bg-blue-50/20 dark:bg-cyan-500/20 transition-colors rounded"
         >
           Sign in with Google
         </button>
@@ -1086,10 +1105,10 @@ function SignInToReportModal({ onClose, onAnonymous }: { onClose: () => void; on
   return (
     <>
       <div
-        className="fixed inset-0 z-[2600] bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[2600] bg-white/60 dark:bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-black/95 border border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
+      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-white/95 dark:bg-black/95 border border-blue-500/40 dark:border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-2">
           <div className="text-[9px] uppercase tracking-widest text-cyan-500/60">How would you like to report?</div>
           <button onClick={onClose} className="text-cyan-500/40 hover:text-cyan-400 -mt-0.5">
@@ -1524,13 +1543,13 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
       />
       <div className="absolute top-2 left-2 z-[1000]">
         {authority && authorityLabel ? (
-          <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-2 py-1 rounded" style={{ border: `1px solid ${authority.color}40` }}>
+          <div className="flex items-center gap-1.5 bg-white/70 dark:bg-black/70 backdrop-blur-sm px-2 py-1 rounded" style={{ border: `1px solid ${authority.color}40` }}>
             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: authority.color }} />
             <span className="text-[9px] uppercase font-bold tracking-wide" style={{ color: authority.color }}>{authority.label}</span>
-            <span className="text-[9px] text-white/50">→ {authorityLabel}</span>
+            <span className="text-[9px] text-black dark:text-white/50">→ {authorityLabel}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-2 py-1 rounded border border-cyan-500/20 overflow-hidden" style={{ width: 160 }}>
+          <div className="flex items-center gap-1.5 bg-white/70 dark:bg-black/70 backdrop-blur-sm px-2 py-1 rounded border border-blue-500/20 dark:border-cyan-500/20 overflow-hidden" style={{ width: 160 }}>
             <div className="h-3 rounded w-full bg-gradient-to-r from-cyan-900/40 via-cyan-500/20 to-cyan-900/40" style={{ backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite" }} />
           </div>
         )}
@@ -1756,7 +1775,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
   return (
     <>
       <motion.div
-        className="fixed inset-0 z-[2500] bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-[2500] bg-white/50 dark:bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         onPointerDown={(e) => e.nativeEvent.stopPropagation()}
         onTouchStart={(e) => e.nativeEvent.stopPropagation()}
@@ -1766,7 +1785,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         transition={{ duration: 0.2 }}
       />
       <motion.div
-        className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-black/95 border-t border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] flex flex-col shadow-[0_-8px_40px_rgba(0,255,255,0.1)]"
+        className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-[600px] z-[2501] bg-white/95 dark:bg-black/95 border-t border-blue-500/40 dark:border-cyan-500/40 rounded-t-2xl font-mono max-h-[85vh] flex flex-col shadow-[0_-8px_40px_rgba(0,255,255,0.1)]"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.nativeEvent.stopPropagation()}
         onTouchStart={(e) => e.nativeEvent.stopPropagation()}
@@ -1781,7 +1800,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
           className="flex justify-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing"
           onPointerDown={startHandleDrag}
         >
-          <div className="w-12 h-1.5 rounded-full bg-cyan-500/40" />
+          <div className="w-12 h-1.5 rounded-full bg-blue-50/40 dark:bg-cyan-500/40" />
         </div>
         {/* Scrollable content */}
         <div
@@ -1790,10 +1809,10 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
         >
 
           {/* Header */}
-          <div className="flex items-start justify-between px-4 pt-2 pb-3 border-b border-cyan-500/20">
+          <div className="flex items-start justify-between px-4 pt-2 pb-3 border-b border-blue-500/20 dark:border-cyan-500/20">
             <div>
-              <div className="text-[9px] uppercase tracking-widest text-cyan-500/60 mb-1">Kuzhi Report</div>
-              <div className="text-sm font-bold text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
+              <div className="text-[9px] uppercase tracking-widest text-blue-700/60 dark:text-cyan-500/60 mb-1">Kuzhi Report</div>
+              <div className="text-sm font-bold text-blue-600 dark:text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
               {ac && (
                 <div className="flex flex-col gap-0.5 mt-0.5">
                   {ac.lsgdLabel && <div className="text-[10px] text-orange-400/80">{ac.lsgdLabel}</div>}
@@ -1806,10 +1825,10 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               )}
             </div>
             <div className="flex items-center gap-3 ml-3 mt-1 shrink-0">
-              <button onClick={handleShare} className="text-cyan-500/50 hover:text-cyan-400">
+              <button onClick={handleShare} className="text-blue-700/50 dark:text-cyan-500/50 hover:text-blue-600 dark:text-cyan-400">
                 <Share2 className="w-5 h-5" />
               </button>
-              <button onClick={onClose} className="text-cyan-500/50 hover:text-cyan-400">
+              <button onClick={onClose} className="text-blue-700/50 dark:text-cyan-500/50 hover:text-blue-600 dark:text-cyan-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1826,11 +1845,11 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               <span className="px-2 py-0.5 text-[9px] uppercase font-bold text-black" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}>
                 {report.severity?.toUpperCase() || "LOW"}
               </span>
-              <span className="px-2 py-0.5 text-[9px] uppercase font-bold border border-cyan-500/50 text-cyan-400">
+              <span className="px-2 py-0.5 text-[9px] uppercase font-bold border border-blue-500/50 dark:border-cyan-500/50 text-blue-600 dark:text-cyan-400">
                 {report.status?.toUpperCase() || "REPORTED"}
               </span>
-              <span className="text-[9px] text-cyan-500/60 ml-auto">
-                Score: <span className={upvoters.length - downvoters.length < 0 ? "text-red-400" : "text-cyan-400"}>
+              <span className="text-[9px] text-blue-700/60 dark:text-cyan-500/60 ml-auto">
+                Score: <span className={upvoters.length - downvoters.length < 0 ? "text-red-400" : "text-blue-600 dark:text-cyan-400"}>
                   {upvoters.length - downvoters.length > 0 ? "+" : ""}{upvoters.length - downvoters.length}
                 </span>
               </span>
@@ -1838,7 +1857,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
 
             {/* Image */}
             {report.imageUrl && (
-              <div className="w-full rounded border border-cyan-500/30 overflow-hidden">
+              <div className="w-full rounded border border-blue-500/30 dark:border-cyan-500/30 overflow-hidden">
                 <img src={report.imageUrl} alt="Pothole" className="w-full object-cover max-h-48" />
               </div>
             )}
@@ -1846,12 +1865,12 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
             {/* Details grid */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px]">
               <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Reported By</div>
-                <div className="text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
+                <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">Reported By</div>
+                <div className="text-blue-500 dark:text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
               </div>
               <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
-                <div className="text-cyan-300 font-bold">
+                <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
+                <div className="text-blue-500 dark:text-cyan-300 font-bold">
                   {report.createdAt
                     ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                     : "—"}
@@ -1859,14 +1878,14 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               </div>
               {report.district && (
                 <div>
-                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
-                  <div className="text-cyan-300 font-bold">{report.district}</div>
+                  <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
+                  <div className="text-blue-500 dark:text-cyan-300 font-bold">{report.district}</div>
                 </div>
               )}
               {(report.wardNo != null || ac?.wardNo != null) && (
                 <div>
-                  <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward</div>
-                  <div className="text-cyan-300 font-bold">
+                  <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward</div>
+                  <div className="text-blue-500 dark:text-cyan-300 font-bold">
                     {report.wardName ?? ac?.wardName} (#{report.wardNo ?? ac?.wardNo})
                   </div>
                 </div>
@@ -1888,9 +1907,9 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                 );
                 const ContactCell = ({ label, name, party, phone, email }: { label: string; name: string; party?: string | null; phone?: string | null; email?: string | null }) => (
                   <div>
-                    <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">{label}</div>
-                    <div className="text-cyan-300 font-bold leading-tight">{name}</div>
-                    {party && <div className="text-cyan-400/60 text-[9px] mt-0.5 leading-tight">{party}</div>}
+                    <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">{label}</div>
+                    <div className="text-blue-500 dark:text-cyan-300 font-bold leading-tight">{name}</div>
+                    {party && <div className="text-blue-600/60 dark:text-cyan-400/60 text-[9px] mt-0.5 leading-tight">{party}</div>}
                     {(phone || email) && (
                       <div className="flex gap-1 mt-1.5">
                         {phone && (
@@ -1901,7 +1920,7 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                         )}
                         {email && (
                           <a href={`mailto:${email}`} aria-label={`Email ${name}`}
-                            className="flex items-center gap-1 px-1.5 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[9px] font-bold uppercase tracking-widest hover:bg-cyan-500/20 transition-colors">
+                            className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50/10 dark:bg-cyan-500/10 border border-blue-500/30 dark:border-cyan-500/30 text-blue-600 dark:text-cyan-400 text-[9px] font-bold uppercase tracking-widest hover:bg-blue-50/20 dark:bg-cyan-500/20 transition-colors">
                             <MailIcon /> Mail
                           </a>
                         )}
@@ -1942,20 +1961,20 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
 
             {/* Notes */}
             {report.notes && (
-              <div className="border-l-2 border-cyan-500/40 pl-3 text-[11px] text-cyan-400/80 italic leading-relaxed">
+              <div className="border-l-2 border-blue-500/40 dark:border-cyan-500/40 pl-3 text-[11px] text-blue-600/80 dark:text-cyan-400/80 italic leading-relaxed">
                 "{report.notes}"
               </div>
             )}
 
             {/* Vote nudge */}
-            <div className="rounded border border-cyan-500/20 bg-cyan-950/40 px-3 py-2 text-[10px] leading-relaxed text-cyan-400/80">
-              <span className="font-bold text-cyan-400">Confirm</span> if you&apos;ve seen this pothole —
+            <div className="rounded border border-blue-500/20 dark:border-cyan-500/20 bg-blue-150/40 dark:bg-cyan-950/40 px-3 py-2 text-[10px] leading-relaxed text-blue-600/80 dark:text-cyan-400/80">
+              <span className="font-bold text-blue-600 dark:text-cyan-400">Confirm</span> if you&apos;ve seen this pothole —
               more confirmations make the report credible and increase the chance of{" "}
-              <span className="font-bold text-cyan-300">government action</span>.{" "}
+              <span className="font-bold text-blue-500 dark:text-cyan-300">government action</span>.{" "}
               <span className="font-bold text-red-400">Dispute</span> only if this road is fine or the report is inaccurate.{" "}
               <button
                 onClick={(e) => { e.stopPropagation(); handleShare(); }}
-                className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-200 transition-colors"
+                className="font-bold text-blue-500 dark:text-cyan-300 underline underline-offset-2 hover:text-blue-400 dark:text-cyan-200 transition-colors"
               >
                 Share
               </button>{" "}
@@ -1963,17 +1982,17 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
             </div>
 
             {/* Vote buttons */}
-            <div className="flex gap-2 pt-1 border-t border-cyan-500/20">
+            <div className="flex gap-2 pt-1 border-t border-blue-500/20 dark:border-cyan-500/20">
               <button
                 onClick={(e) => { e.stopPropagation(); onVote(report.id, "up", upvoters, downvoters); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasUpvoted ? "border-cyan-400 bg-cyan-900/50 text-cyan-400" : "border-cyan-500/30 text-cyan-500/50 hover:bg-cyan-900/30 hover:text-cyan-400"}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasUpvoted ? "border-blue-400 dark:border-cyan-400 bg-blue-100/50 dark:bg-cyan-900/50 text-blue-600 dark:text-cyan-400" : "border-blue-500/30 dark:border-cyan-500/30 text-blue-700/50 dark:text-cyan-500/50 hover:bg-blue-100/30 dark:bg-cyan-900/30 hover:text-blue-600 dark:text-cyan-400"}`}
               >
                 <ThumbsUp className={`w-3 h-3 ${hasUpvoted ? "fill-cyan-400" : ""}`} />
                 Confirm ({upvoters.length})
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onVote(report.id, "down", upvoters, downvoters); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasDownvoted ? "border-red-500 bg-red-900/50 text-red-500" : "border-cyan-500/30 text-cyan-500/50 hover:bg-red-900/30 hover:text-red-500"}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold uppercase border transition-all ${hasDownvoted ? "border-red-500 bg-red-900/50 text-red-500" : "border-blue-500/30 dark:border-cyan-500/30 text-blue-700/50 dark:text-cyan-500/50 hover:bg-red-900/30 hover:text-red-500"}`}
               >
                 <ThumbsDown className={`w-3 h-3 ${hasDownvoted ? "fill-red-500" : ""}`} />
                 Dispute ({downvoters.length})
@@ -2045,13 +2064,13 @@ function ReportingOverlay({
           onMouseEnter={() => setIsDesktopHovered(true)}
           onMouseLeave={() => setIsDesktopHovered(false)}
         >
-          <div className="bg-black/80 border border-cyan-500/50 p-4 md:p-5 shadow-[0_0_20px_rgba(0,255,255,0.15)] backdrop-blur-md relative pointer-events-auto transition-all duration-300">
+          <div className="bg-white/80 dark:bg-black/80 border border-blue-500/50 dark:border-cyan-500/50 p-4 md:p-5 shadow-[0_0_20px_rgba(0,255,255,0.15)] backdrop-blur-md relative pointer-events-auto transition-all duration-300">
             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-50"></div>
 
             <div className="flex justify-between items-center">
               <div className="flex flex-col">
-                <h1 className="text-lg md:text-xl font-bold tracking-[0.2em] text-cyan-400 flex items-center gap-2 md:gap-3 uppercase">
-                  <span className="text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)] flex items-center justify-center">
+                <h1 className="text-lg md:text-xl font-bold tracking-[0.2em] text-blue-600 dark:text-cyan-400 flex items-center gap-2 md:gap-3 uppercase">
+                  <span className="text-blue-600 dark:text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)] flex items-center justify-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
@@ -2090,7 +2109,7 @@ function ReportingOverlay({
                     Kuzhiyundo?
                   </span>
                 </h1>
-                <div className="text-[9px] md:text-[10px] text-cyan-500/80 mt-1 uppercase tracking-widest font-semibold flex items-center gap-1 overflow-hidden h-4 md:h-5">
+                <div className="text-[9px] md:text-[10px] text-blue-700/80 dark:text-cyan-500/80 mt-1 uppercase tracking-widest font-semibold flex items-center gap-1 overflow-hidden h-4 md:h-5">
                   <div className="flex items-center justify-center mr-0.5">
                     <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff003c] opacity-75"></span>
@@ -2132,13 +2151,13 @@ function ReportingOverlay({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
+                  className="bg-blue-50 dark:bg-cyan-500 hover:bg-blue-50 dark:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
                 >
                   <Plus className="w-3 h-3" /> Report
                 </button>
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="md:hidden flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-cyan-300 px-2 py-1.5 border border-cyan-400/50 bg-cyan-900/50 hover:bg-cyan-800/60 shadow-[0_0_8px_rgba(0,255,255,0.2)] transition-all"
+                  className="md:hidden flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-blue-500 dark:text-cyan-300 px-2 py-1.5 border border-blue-400/50 dark:border-cyan-400/50 bg-blue-100/50 dark:bg-cyan-900/50 hover:bg-blue-50/60 dark:bg-cyan-800/60 shadow-[0_0_8px_rgba(0,255,255,0.2)] transition-all"
                 >
                   <div
                     className="transition-transform duration-300"
@@ -2156,10 +2175,10 @@ function ReportingOverlay({
             >
               <div className="overflow-hidden flex flex-col">
                 <div className="pt-3">
-                  <p className="text-[9px] md:text-[10px] text-cyan-500/70 uppercase tracking-widest border-t border-cyan-500/20 pt-2">
+                  <p className="text-[9px] md:text-[10px] text-blue-700/70 dark:text-cyan-500/70 uppercase tracking-widest border-t border-blue-500/20 dark:border-cyan-500/20 pt-2">
                     Community Pothole Tracker
                   </p>
-                  <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-cyan-500/20 flex items-center gap-1.5 text-[8px] md:text-[9px] text-cyan-500/60 uppercase tracking-widest">
+                  <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-blue-500/20 dark:border-cyan-500/20 flex items-center gap-1.5 text-[8px] md:text-[9px] text-blue-700/60 dark:text-cyan-500/60 uppercase tracking-widest">
                     <span>Built with</span>
                     <Heart className="w-2.5 h-2.5 md:w-3 md:h-3 text-red-500 fill-red-500 animate-pulse" />
                     <span>by</span>
@@ -2167,7 +2186,7 @@ function ReportingOverlay({
                       href="https://sajithlal.com"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-cyan-400 hover:text-white transition-colors underline underline-offset-2 decoration-cyan-500/50 pointer-events-auto"
+                      className="text-blue-600 dark:text-cyan-400 hover:text-black dark:text-white transition-colors underline underline-offset-2 decoration-cyan-500/50 pointer-events-auto"
                     >
                       Sajithlal
                     </a>
@@ -2184,7 +2203,7 @@ function ReportingOverlay({
               <div className="flex flex-col gap-2 md:gap-3">
                 <button
                   onClick={() => document.getElementById("seo-content")?.scrollIntoView({ behavior: "smooth" })}
-                  className="bg-black/50 hover:bg-cyan-500/10 text-cyan-500 hover:text-cyan-300 py-1.5 md:py-2 px-4 transition-all border border-cyan-500/30 hover:border-cyan-400/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
+                  className="bg-white/50 dark:bg-black/50 hover:bg-blue-50/10 dark:bg-cyan-500/10 text-blue-700 dark:text-cyan-500 hover:text-blue-500 dark:text-cyan-300 py-1.5 md:py-2 px-4 transition-all border border-blue-500/30 dark:border-cyan-500/30 hover:border-blue-400/50 dark:border-cyan-400/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
                 >
                   <ExternalLink className="w-3 h-3" /> About
                 </button>
@@ -2192,14 +2211,14 @@ function ReportingOverlay({
                   href="https://github.com/sajithlaldev/kuzhiyundo/issues/new"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-black/50 hover:bg-yellow-500/10 text-cyan-500 hover:text-yellow-400 py-1.5 md:py-2 px-4 transition-all border border-cyan-500/30 hover:border-yellow-500/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
+                  className="bg-white/50 dark:bg-black/50 hover:bg-yellow-500/10 text-blue-700 dark:text-cyan-500 hover:text-yellow-400 py-1.5 md:py-2 px-4 transition-all border border-blue-500/30 dark:border-cyan-500/30 hover:border-yellow-500/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
                 >
                   <Bug className="w-3 h-3" /> Report a Bug <ExternalLink className="w-2.5 h-2.5 opacity-60" />
                 </a>
                 {user && (
                   <button
                     onClick={logout}
-                    className="bg-black/50 hover:bg-red-500/20 text-cyan-500 hover:text-red-400 py-1.5 md:py-2 px-4 transition-all border border-cyan-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
+                    className="bg-white/50 dark:bg-black/50 hover:bg-red-500/20 text-blue-700 dark:text-cyan-500 hover:text-red-400 py-1.5 md:py-2 px-4 transition-all border border-blue-500/30 dark:border-cyan-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest backdrop-blur-md"
                   >
                     <LogOut className="w-3 h-3" /> SIGN OUT
                   </button>
@@ -2223,26 +2242,26 @@ function ReportingOverlay({
 
   return (
     <div ref={overlayRef} className="absolute z-[9999] left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-max md:max-w-[90vw] flex flex-col items-center flex-nowrap font-mono" style={{ top: "max(1rem, var(--sat))" }}>
-      <div className="bg-black/90 border border-cyan-500/60 w-full px-4 md:px-6 py-5 shadow-[0_0_25px_rgba(0,255,255,0.2)] backdrop-blur-md flex flex-col items-center text-center relative pointer-events-auto max-h-[80vh] overflow-y-auto">
-        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-cyan-500 shadow-[0_0_10px_rgba(0,255,255,1)]"></div>
+      <div className="bg-white/90 dark:bg-black/90 border border-blue-500/60 dark:border-cyan-500/60 w-full px-4 md:px-6 py-5 shadow-[0_0_25px_rgba(0,255,255,0.2)] backdrop-blur-md flex flex-col items-center text-center relative pointer-events-auto max-h-[80vh] overflow-y-auto">
+        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-50 dark:bg-cyan-500 shadow-[0_0_10px_rgba(0,255,255,1)]"></div>
 
         {!origin ? (
           <>
-            <Navigation className="w-6 h-6 text-cyan-400 mb-3 animate-pulse" />
-            <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Step 1: Start Point</h3>
-            <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest">&gt; tap map where kuzhi starts</p>
+            <Navigation className="w-6 h-6 text-blue-600 dark:text-cyan-400 mb-3 animate-pulse" />
+            <h3 className="text-blue-600 dark:text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Step 1: Start Point</h3>
+            <p className="text-blue-700/60 dark:text-cyan-500/60 text-[10px] uppercase tracking-widest">&gt; tap map where kuzhi starts</p>
           </>
         ) : !destination ? (
           <>
-            <Navigation className="w-6 h-6 text-cyan-400 mb-3 animate-pulse" />
-            <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Step 2: End Point</h3>
-            <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest">&gt; tap map where kuzhi ends</p>
+            <Navigation className="w-6 h-6 text-blue-600 dark:text-cyan-400 mb-3 animate-pulse" />
+            <h3 className="text-blue-600 dark:text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Step 2: End Point</h3>
+            <p className="text-blue-700/60 dark:text-cyan-500/60 text-[10px] uppercase tracking-widest">&gt; tap map where kuzhi ends</p>
           </>
         ) : !pointsConfirmed ? (
           <>
-            <Navigation className="w-6 h-6 text-cyan-400 mb-3" />
-            <h3 className="text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Points Selected</h3>
-            <p className="text-cyan-500/60 text-[10px] uppercase tracking-widest mb-4">&gt; tap map to reselect start point</p>
+            <Navigation className="w-6 h-6 text-blue-600 dark:text-cyan-400 mb-3" />
+            <h3 className="text-blue-600 dark:text-cyan-400 font-bold uppercase tracking-[0.15em] mb-1">Points Selected</h3>
+            <p className="text-blue-700/60 dark:text-cyan-500/60 text-[10px] uppercase tracking-widest mb-4">&gt; tap map to reselect start point</p>
             {routeError ? (
               <div className="w-full py-2 px-3 bg-red-500/10 border border-red-500/40 text-red-400 text-[10px] uppercase tracking-widest text-center leading-relaxed">
                 {routeError}
@@ -2251,7 +2270,7 @@ function ReportingOverlay({
               <button
                 onClick={onConfirmPoints}
                 disabled={!currentPathEncoded}
-                className="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-900 disabled:text-cyan-600 text-black font-bold text-[11px] uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(0,255,255,0.4)] disabled:shadow-none"
+                className="w-full py-2.5 bg-blue-50 dark:bg-cyan-500 hover:bg-blue-50 dark:bg-cyan-400 disabled:bg-blue-100 dark:bg-cyan-900 disabled:text-blue-800 dark:text-cyan-600 text-black font-bold text-[11px] uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(0,255,255,0.4)] disabled:shadow-none"
               >
                 {currentPathEncoded ? "Confirm Points" : "Calculating route…"}
               </button>
@@ -2269,7 +2288,7 @@ function ReportingOverlay({
         )}
 
         {!pointsConfirmed && (
-          <button onClick={onCancel} className="mt-6 text-[10px] text-cyan-500/50 hover:text-red-400 uppercase tracking-widest transition-colors">
+          <button onClick={onCancel} className="mt-6 text-[10px] text-blue-700/50 dark:text-cyan-500/50 hover:text-red-400 uppercase tracking-widest transition-colors">
             [ CANCEL ]
           </button>
         )}
@@ -2457,7 +2476,7 @@ function SubmitRouteForm({
 
   return (
     <div className="flex flex-col gap-5 w-[280px]">
-      <div className="flex items-center justify-center gap-2 text-cyan-400 mb-2 border-b border-cyan-500/30 pb-3">
+      <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-cyan-400 mb-2 border-b border-blue-500/30 dark:border-cyan-500/30 pb-3">
         <CheckCircle className="w-5 h-5 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
         <span className="uppercase tracking-[0.2em] font-bold text-xs">
           Route Selected
@@ -2465,10 +2484,10 @@ function SubmitRouteForm({
       </div>
 
       <div className="flex flex-col gap-2 text-left">
-        <label className="text-[10px] uppercase font-bold tracking-widest text-cyan-500/70 border-l-2 border-cyan-500 pl-2">
+        <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
           Reporting As
         </label>
-        <p className="text-[10px] text-cyan-300 bg-cyan-900/30 border border-cyan-500/30 p-2 truncate">
+        <p className="text-[10px] text-blue-500 dark:text-cyan-300 bg-blue-100/30 dark:bg-cyan-900/30 border border-blue-500/30 dark:border-cyan-500/30 p-2 truncate">
           {(user?.displayName || user?.email || "Anonymous").substring(0, 20)}
           {(user?.displayName || user?.email || "Anonymous").length > 20
             ? "..."
@@ -2477,34 +2496,34 @@ function SubmitRouteForm({
       </div>
 
       <div className="flex flex-col gap-2 text-left">
-        <label className="text-[10px] uppercase font-bold tracking-widest text-cyan-500/70 border-l-2 border-cyan-500 pl-2">
+        <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
           Location
         </label>
-        <p className="text-[10px] text-cyan-300 bg-cyan-900/30 border border-cyan-500/30 p-2 break-words">
+        <p className="text-[10px] text-blue-500 dark:text-cyan-300 bg-blue-100/30 dark:bg-cyan-900/30 border border-blue-500/30 dark:border-cyan-500/30 p-2 break-words">
           {address}
         </p>
       </div>
 
       <div className="flex flex-col gap-2 text-left">
-        <label className="text-[10px] uppercase font-bold tracking-widest text-cyan-500/70 border-l-2 border-cyan-500 pl-2">
+        <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
           Severity Level
         </label>
         <div className="flex gap-2">
           <button
             onClick={() => setSeverity("low")}
-            className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${severity === "low" ? "bg-[#00f0ff] text-black shadow-[0_0_10px_#00f0ff] border-[#00f0ff]" : "bg-black text-[#00f0ff] border-[#00f0ff]/40 hover:bg-[#00f0ff]/20"}`}
+            className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${severity === "low" ? "bg-[#00f0ff] text-black shadow-[0_0_10px_#00f0ff] border-[#00f0ff]" : "bg-white dark:bg-black text-[#00f0ff] border-[#00f0ff]/40 hover:bg-[#00f0ff]/20"}`}
           >
             Low
           </button>
           <button
             onClick={() => setSeverity("medium")}
-            className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${severity === "medium" ? "bg-[#ff9900] text-black shadow-[0_0_10px_#ff9900] border-[#ff9900]" : "bg-black text-[#ff9900] border-[#ff9900]/40 hover:bg-[#ff9900]/20"}`}
+            className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${severity === "medium" ? "bg-[#ff9900] text-black shadow-[0_0_10px_#ff9900] border-[#ff9900]" : "bg-white dark:bg-black text-[#ff9900] border-[#ff9900]/40 hover:bg-[#ff9900]/20"}`}
           >
             Medium
           </button>
           <button
             onClick={() => setSeverity("high")}
-            className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${severity === "high" ? "bg-[#ff003c] text-black shadow-[0_0_10px_#ff003c] border-[#ff003c]" : "bg-black text-[#ff003c] border-[#ff003c]/40 hover:bg-[#ff003c]/20"}`}
+            className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all ${severity === "high" ? "bg-[#ff003c] text-black shadow-[0_0_10px_#ff003c] border-[#ff003c]" : "bg-white dark:bg-black text-[#ff003c] border-[#ff003c]/40 hover:bg-[#ff003c]/20"}`}
           >
             High
           </button>
@@ -2513,10 +2532,10 @@ function SubmitRouteForm({
 
       <div className="flex flex-col gap-2 text-left">
         <div className="flex justify-between items-center">
-          <label className="text-[10px] uppercase font-bold tracking-widest text-cyan-500/70 border-l-2 border-cyan-500 pl-2">
+          <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
             Optional Notes
           </label>
-          <span className="text-[9px] text-cyan-500/50 uppercase">
+          <span className="text-[9px] text-blue-700/50 dark:text-cyan-500/50 uppercase">
             {notes.length}/200
           </span>
         </div>
@@ -2525,12 +2544,12 @@ function SubmitRouteForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Describe the issue..."
-          className="bg-cyan-900/20 border border-cyan-500/30 text-cyan-300 text-[10px] p-2 focus:outline-none focus:border-cyan-500 focus:shadow-[0_0_5px_rgba(0,240,255,0.3)] resize-none h-16 w-full placeholder:text-cyan-500/30 font-mono scrollbar-none"
+          className="bg-blue-100/20 dark:bg-cyan-900/20 border border-blue-500/30 dark:border-cyan-500/30 text-blue-500 dark:text-cyan-300 text-[10px] p-2 focus:outline-none focus:border-blue-500 dark:border-cyan-500 focus:shadow-[0_0_5px_rgba(0,240,255,0.3)] resize-none h-16 w-full placeholder:text-blue-700/30 dark:text-cyan-500/30 font-mono scrollbar-none"
         />
       </div>
 
       <div className="flex flex-col gap-2 text-left">
-        <label className="text-[10px] uppercase font-bold tracking-widest text-cyan-500/70 border-l-2 border-cyan-500 pl-2">
+        <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
           Photo (Optional)
         </label>
         <input
@@ -2541,7 +2560,7 @@ function SubmitRouteForm({
           onChange={handleImageChange}
         />
         {imageUrl ? (
-          <div className="relative border border-cyan-500/50 p-1 w-full max-h-24 overflow-hidden rounded-sm flex items-center justify-center bg-black/50">
+          <div className="relative border border-blue-500/50 dark:border-cyan-500/50 p-1 w-full max-h-24 overflow-hidden rounded-sm flex items-center justify-center bg-white/50 dark:bg-black/50">
             <img
               src={imageUrl}
               alt="Pothole"
@@ -2552,7 +2571,7 @@ function SubmitRouteForm({
                 setImageUrl(null);
                 if (fileInputRef.current) fileInputRef.current.value = "";
               }}
-              className="absolute top-1 right-1 bg-black/80 border border-cyan-500 text-cyan-500 p-0.5 hover:text-red-500 hover:border-red-500 transition-colors"
+              className="absolute top-1 right-1 bg-white/80 dark:bg-black/80 border border-blue-500 dark:border-cyan-500 text-blue-700 dark:text-cyan-500 p-0.5 hover:text-red-500 hover:border-red-500 transition-colors"
             >
               <X className="w-3 h-3" />
             </button>
@@ -2560,9 +2579,9 @@ function SubmitRouteForm({
         ) : (
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="border border-dashed border-cyan-500/50 hover:border-cyan-500 hover:bg-cyan-900/30 text-cyan-500/70 py-4 flex flex-col items-center justify-center gap-2 transition-colors w-full"
+            className="border border-dashed border-blue-500/50 dark:border-cyan-500/50 hover:border-blue-500 dark:border-cyan-500 hover:bg-blue-100/30 dark:bg-cyan-900/30 text-blue-700/70 dark:text-cyan-500/70 py-4 flex flex-col items-center justify-center gap-2 transition-colors w-full"
           >
-            <Camera className="w-5 h-5 text-cyan-500/50" />
+            <Camera className="w-5 h-5 text-blue-700/50 dark:text-cyan-500/50" />
             <span className="text-[9px] uppercase tracking-widest">
               Add Photo
             </span>
@@ -2594,7 +2613,7 @@ function SubmitRouteForm({
       </button>
       <button
         onClick={onCancel}
-        className="text-[10px] text-cyan-500/50 hover:text-red-400 uppercase tracking-widest transition-colors mt-2"
+        className="text-[10px] text-blue-700/50 dark:text-cyan-500/50 hover:text-red-400 uppercase tracking-widest transition-colors mt-2"
       >
         [ CANCEL ]
       </button>
@@ -2680,22 +2699,22 @@ function MapSearch() {
           onFocus={() => setShowResults(true)}
           placeholder="SEARCH LOCATION..."
           style={{ fontSize: 16 }}
-          className="w-full bg-black/90 border border-cyan-500/50 text-cyan-400 pl-8 pr-3 py-2 uppercase tracking-widest outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] placeholder:text-cyan-500/30 font-mono backdrop-blur-md"
+          className="w-full bg-white/90 dark:bg-black/90 border border-blue-500/50 dark:border-cyan-500/50 text-blue-600 dark:text-cyan-400 pl-8 pr-3 py-2 uppercase tracking-widest outline-none focus:border-blue-400 dark:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] placeholder:text-blue-700/30 dark:text-cyan-500/30 font-mono backdrop-blur-md"
         />
-        <Search className="w-4 h-4 text-cyan-500/50 absolute left-2.5 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-blue-700/50 dark:text-cyan-500/50 absolute left-2.5 top-1/2 -translate-y-1/2" />
 
         {showResults && results.length > 0 && (
-          <div className="absolute bottom-full mb-1 md:bottom-auto md:top-full md:mt-1 md:mb-0 w-full bg-black/95 border border-cyan-500/30 max-h-[min(15rem,50vh)] overflow-y-auto backdrop-blur-md">
+          <div className="absolute bottom-full mb-1 md:bottom-auto md:top-full md:mt-1 md:mb-0 w-full bg-white/95 dark:bg-black/95 border border-blue-500/30 dark:border-cyan-500/30 max-h-[min(15rem,50vh)] overflow-y-auto backdrop-blur-md">
             {results.map((r, i) => (
               <button
                 key={i}
                 onClick={() => goToPlace(r)}
-                className="w-full text-left px-3 py-2 hover:bg-cyan-900/40 text-cyan-400 text-xs flex flex-col border-b border-cyan-500/10 last:border-0"
+                className="w-full text-left px-3 py-2 hover:bg-blue-100/40 dark:bg-cyan-900/40 text-blue-600 dark:text-cyan-400 text-xs flex flex-col border-b border-blue-500/10 dark:border-cyan-500/10 last:border-0"
               >
                 <span className="font-bold truncate w-full block">
                   {r.name || r.display_name?.split(",")[0] || "Unknown"}
                 </span>
-                <span className="text-[9px] text-cyan-500/60 truncate w-full block">
+                <span className="text-[9px] text-blue-700/60 dark:text-cyan-500/60 truncate w-full block">
                   {r.subtitle || r.display_name || ""}
                 </span>
               </button>

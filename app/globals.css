@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
 /* Safe-area and viewport custom properties.
    --sat / --sab: resolved once from env() so all elements share the same value.
    --app-height: overridden by JS via window.visualViewport for pixel-perfect sizing. */
