@@ -739,7 +739,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                       e.stopPropagation();
                       handleVote(report.id, "up", upvoters, downvoters);
                     }}
-                    className={`flex items-center gap-1 p-1 rounded-sm border transition-all text-[10px] font-bold ${hasUpvoted ? "border-blue-600 dark:border-cyan-400 bg-blue-100 dark:bg-cyan-900/50 text-blue-700 dark:text-cyan-400" : "border-transparent text-blue-500/70 dark:text-cyan-500/50 hover:bg-blue-100 dark:hover:bg-blue-100/30 dark:bg-cyan-900/30 hover:text-blue-700 dark:hover:text-blue-600 dark:text-cyan-400"}`}
+                    className={`flex items-center gap-1 p-1 rounded-sm border transition-all text-[10px] font-bold ${hasUpvoted ? "border-blue-600 dark:border-cyan-400 bg-blue-100 dark:bg-cyan-900/50 text-blue-700 dark:text-cyan-400" : "border-blue-200 dark:border-transparent text-blue-500 dark:text-cyan-500/50 hover:bg-blue-100 dark:hover:bg-blue-100/30 dark:bg-cyan-900/30 hover:text-blue-700 dark:hover:text-cyan-400"}`}
                     title="Upvote"
                   >
                     <ThumbsUp
@@ -751,7 +751,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                       e.stopPropagation();
                       handleVote(report.id, "down", upvoters, downvoters);
                     }}
-                    className={`flex items-center gap-1 p-1 rounded-sm border transition-all text-[10px] font-bold ${hasDownvoted ? "border-red-500 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-500" : "border-transparent text-blue-500/70 dark:text-cyan-500/50 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-500"}`}
+                    className={`flex items-center gap-1 p-1 rounded-sm border transition-all text-[10px] font-bold ${hasDownvoted ? "border-red-500 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-500" : "border-blue-200 dark:border-transparent text-blue-500 dark:text-cyan-500/50 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-500"}`}
                     title="Downvote"
                   >
                     <ThumbsDown
@@ -876,7 +876,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                   <button
                     onClick={(e) => handleSaveEdit(report.id, e)}
                     disabled={isSavingEdit}
-                    className="flex-1 bg-blue-50 dark:bg-cyan-500 hover:bg-blue-50 dark:bg-cyan-400 text-black px-2 py-1 uppercase text-[10px] font-bold transition-colors disabled:opacity-50"
+                    className="flex-1 bg-blue-600 dark:bg-cyan-500 hover:bg-blue-700 dark:hover:bg-cyan-400 text-white dark:text-black px-2 py-1 uppercase text-[10px] font-bold transition-colors disabled:opacity-50"
                   >
                     Save
                   </button>
@@ -901,7 +901,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                     setEditImageUrl(report.imageUrl || null);
                     setEditingId(report.id);
                   }}
-                  className="flex-1 flex items-center justify-center gap-1 bg-blue-50/10 dark:bg-cyan-500/10 hover:bg-blue-50/20 dark:bg-cyan-500/20 text-blue-600 dark:text-cyan-400 border border-blue-500/50 dark:border-cyan-500/50 px-2 py-1.5 text-[10px] uppercase tracking-widest font-bold transition-colors shadow-[0_0_10px_rgba(0,255,255,0.1)]"
+                  className="flex-1 flex items-center justify-center gap-1 bg-blue-100 dark:bg-cyan-500/10 hover:bg-blue-200 dark:hover:bg-cyan-500/20 text-blue-700 dark:text-cyan-400 border border-blue-400 dark:border-cyan-500/50 px-2 py-1.5 text-[10px] uppercase tracking-widest font-bold transition-colors dark:shadow-[0_0_10px_rgba(0,255,255,0.1)]"
                 >
                   Edit
                 </button>
@@ -1092,7 +1092,7 @@ function SignInToVoteModal({ onClose }: { onClose: () => void }) {
         </div>
         <button
           onClick={() => { loginWithGoogle(); onClose(); }}
-          className="w-full py-2.5 text-[11px] font-bold uppercase tracking-widest bg-blue-50/10 dark:bg-cyan-500/10 border border-blue-500/50 dark:border-cyan-500/50 text-blue-600 dark:text-cyan-400 hover:bg-blue-50/20 dark:bg-cyan-500/20 transition-colors rounded"
+          className="w-full py-2.5 text-[11px] font-bold uppercase tracking-widest bg-blue-100 dark:bg-cyan-500/10 border border-blue-500 dark:border-cyan-500/50 text-blue-700 dark:text-cyan-400 hover:bg-blue-200 dark:hover:bg-cyan-500/20 transition-colors rounded"
         >
           Sign in with Google
         </button>
@@ -1110,28 +1110,28 @@ function SignInToReportModal({ onClose, onAnonymous }: { onClose: () => void; on
       />
       <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-white/95 dark:bg-black/95 border border-blue-500/40 dark:border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="text-[9px] uppercase tracking-widest text-cyan-500/60">How would you like to report?</div>
-          <button onClick={onClose} className="text-cyan-500/40 hover:text-cyan-400 -mt-0.5">
+          <div className="text-[9px] uppercase tracking-widest text-blue-600/70 dark:text-cyan-500/60">How would you like to report?</div>
+          <button onClick={onClose} className="text-blue-500/60 dark:text-cyan-500/40 hover:text-blue-700 dark:hover:text-cyan-400 -mt-0.5">
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="flex flex-col gap-1">
-          <div className="text-sm font-bold text-cyan-400">Report a pothole</div>
+          <div className="text-sm font-bold text-blue-700 dark:text-cyan-400">Report a pothole</div>
         </div>
         <div className="flex flex-col gap-3">
           <button
             onClick={() => { loginWithGoogle(); onClose(); }}
-            className="w-full py-3 text-[11px] font-bold uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 transition-colors rounded flex flex-col items-center gap-1"
+            className="w-full py-3 text-[11px] font-bold uppercase tracking-widest bg-blue-100 dark:bg-cyan-500/10 border border-blue-500 dark:border-cyan-500/50 text-blue-700 dark:text-cyan-400 hover:bg-blue-200 dark:hover:bg-cyan-500/20 transition-colors rounded flex flex-col items-center gap-1"
           >
             <span>Sign in with Google</span>
-            <span className="text-[9px] font-normal normal-case tracking-normal text-cyan-400/50">Draw a road segment on the map</span>
+            <span className="text-[9px] font-normal normal-case tracking-normal text-blue-500/70 dark:text-cyan-400/50">Draw a road segment on the map</span>
           </button>
           <button
             onClick={() => { onClose(); onAnonymous(); }}
-            className="w-full py-3 text-[11px] font-bold uppercase tracking-widest bg-white/5 border border-white/20 text-white/70 hover:bg-white/10 transition-colors rounded flex flex-col items-center gap-1"
+            className="w-full py-3 text-[11px] font-bold uppercase tracking-widest bg-blue-50 dark:bg-white/5 border border-blue-300 dark:border-white/20 text-blue-600 dark:text-white/70 hover:bg-blue-100 dark:hover:bg-white/10 transition-colors rounded flex flex-col items-center gap-1"
           >
             <span>Continue Anonymously</span>
-            <span className="text-[9px] font-normal normal-case tracking-normal text-white/40">Upload a geotagged photo of the pothole</span>
+            <span className="text-[9px] font-normal normal-case tracking-normal text-blue-500/60 dark:text-white/40">Upload a geotagged photo of the pothole</span>
           </button>
         </div>
       </div>
@@ -2155,7 +2155,7 @@ function ReportingOverlay({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => user ? setReportingMode(true) : setShowSignInReportPrompt(true)}
-                  className="bg-blue-50 dark:bg-cyan-500 hover:bg-blue-50 dark:bg-cyan-400 text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
+                  className="bg-blue-600 dark:bg-cyan-500 hover:bg-blue-700 dark:hover:bg-cyan-400 text-white dark:text-black font-bold px-3 py-1.5 text-[10px] uppercase tracking-widest flex items-center gap-1 border border-blue-700 dark:border-cyan-400 dark:shadow-[0_0_10px_rgba(0,255,255,0.4)] transition-all"
                 >
                   <Plus className="w-3 h-3" /> Report
                 </button>
