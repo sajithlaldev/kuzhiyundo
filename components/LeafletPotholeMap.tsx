@@ -690,12 +690,6 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                 </div>
               )}
 
-              {report.photoTakenAt && (
-                <div className="text-[10px] m-0 text-cyan-500/70 uppercase">
-                  <span className="text-cyan-500 font-bold mr-1">Photo:</span>
-                  {new Date(report.photoTakenAt.toDate?.() || report.photoTakenAt).toLocaleString()}
-                </div>
-              )}
               {report.createdAt && (
                 <div className="text-[10px] m-0 text-cyan-500/70 uppercase">
                   <span className="text-cyan-500 font-bold mr-1">Log:</span>
@@ -1180,7 +1174,6 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
   const [severity, setSeverity] = useState<"low" | "medium" | "high">("low");
   const [notes, setNotes] = useState("");
   const [address, setAddress] = useState<string>("Locating...");
-  const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1192,29 +1185,10 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
     setErrorMsg(null);
     setGpsCoords(null);
     setImageUrl(null);
-    setPhotoTakenAt(null);
 
     try {
       const exifr = (await import("exifr")).default;
-      const parsed = await exifr.parse(file, { gps: true, exif: true } as any);
-
-      if (!(parsed?.DateTimeOriginal instanceof Date)) {
-        setErrorMsg("This photo has no date/time information. Please use a photo taken directly from your phone's camera app.");
-        return;
-      }
-
-      const takenAt: Date = parsed.DateTimeOriginal;
-      const ageMs = Date.now() - takenAt.getTime();
-      const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-      if (ageMs > MAX_AGE_MS) {
-        setErrorMsg(
-          `This photo was taken on ${takenAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })} — more than 7 days ago. Please take a fresh photo of the pothole and upload it.`
-        );
-        return;
-      }
-      setPhotoTakenAt(takenAt);
-
-      const gps = parsed?.latitude != null ? parsed : await exifr.gps(file);
+      const gps = await exifr.gps(file);
       if (!gps || gps.latitude == null || gps.longitude == null) {
         setGpsError(true);
         return;
@@ -1300,7 +1274,6 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
         upvoterIds: [],
       };
       if (notes.trim()) payload.notes = notes.trim();
-      if (photoTakenAt) payload.photoTakenAt = photoTakenAt;
       if (constituency) {
         payload.acName = constituency.acName;
         payload.acNo = constituency.acNo;
@@ -1341,9 +1314,9 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
         {step === "upload" && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <div className="text-sm font-bold text-white/80">Upload a geotagged photo</div>
+              <div className="text-sm font-bold text-white/80">Take a photo of the pothole</div>
               <p className="text-[11px] text-white/40 leading-relaxed">
-                Take a photo of the pothole with your phone&apos;s camera app (with location enabled). The GPS coordinates will be read from the photo.
+                Point your camera at the pothole and take a photo. GPS coordinates will be read from the photo — make sure location is enabled for your camera.
               </p>
             </div>
             <button
@@ -1351,9 +1324,9 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
               className="w-full py-4 border border-dashed border-white/30 text-white/50 hover:text-white/80 hover:border-white/50 transition-colors rounded flex flex-col items-center gap-2 text-[11px]"
             >
               <Camera className="w-6 h-6" />
-              <span>Choose Photo</span>
+              <span>Open Camera</span>
             </button>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
             {errorMsg && !gpsError && (
               <div className="flex flex-col gap-2 bg-orange-500/10 border border-orange-500/30 rounded p-3">
                 <p className="text-[11px] text-orange-400 font-bold">Photo rejected</p>
@@ -1410,14 +1383,6 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
               <p className="text-[10px] text-white/60 bg-white/5 border border-white/10 p-2 rounded break-words">{address}</p>
             </div>
 
-            {photoTakenAt && (
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Photo Taken</label>
-                <p className="text-[10px] text-white/60 bg-white/5 border border-white/10 p-2 rounded">
-                  {photoTakenAt.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                </p>
-              </div>
-            )}
 
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 border-l-2 border-white/30 pl-2">Reporting As (optional)</label>
@@ -1885,15 +1850,11 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                 <div className="text-cyan-300 font-bold">{report.userName || "Anonymous"}</div>
               </div>
               <div>
-                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">
-                  {report.photoTakenAt ? "Photo Date" : "Date"}
-                </div>
+                <div className="text-cyan-500/50 uppercase tracking-widest mb-0.5">Date</div>
                 <div className="text-cyan-300 font-bold">
-                  {report.photoTakenAt
-                    ? new Date(report.photoTakenAt.toDate?.() || report.photoTakenAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-                    : report.createdAt
-                      ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-                      : "—"}
+                  {report.createdAt
+                    ? new Date(report.createdAt.toDate?.() || report.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                    : "—"}
                 </div>
               </div>
               {report.district && (
