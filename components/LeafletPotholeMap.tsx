@@ -1477,6 +1477,7 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
   const mapRef = useRef<L.Map | null>(null);
   const [roadAuthority, setRoadAuthority] = useState(initialRoadAuthority);
   const [highwayTag, setHighwayTag] = useState(initialHighwayTag);
+  const { theme } = useTheme();
 
   const coords = decode(encodedPath).map(([lat, lng]) => [lat, lng] as [number, number]);
 
@@ -1495,9 +1496,12 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
     });
     mapRef.current = map;
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-    }).addTo(map);
+    L.tileLayer(
+      theme === 'light'
+        ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      { maxZoom: 19 }
+    ).addTo(map);
 
     const color = getColor(severity);
     L.polyline(coords, {
@@ -1511,7 +1515,7 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
       map.remove();
       mapRef.current = null;
     };
-  }, [encodedPath]);
+  }, [encodedPath, theme]);
 
   // Fetch classification if missing, then persist it
   useEffect(() => {
