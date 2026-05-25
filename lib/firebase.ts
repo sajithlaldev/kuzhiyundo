@@ -4,6 +4,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
+  signInAnonymously,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
@@ -57,5 +58,13 @@ export const logout = async () => {
     await signOut(auth);
   } catch (error) {
     console.error("Logout failed:", error);
+  }
+};
+
+export const loginAnonymously = async () => {
+  try {
+    await signInAnonymously(auth);
+  } catch (error) {
+    console.error("Anonymous login failed:", error);
   }
 };
