@@ -262,17 +262,21 @@ export default function LeafletPotholeMap() {
           </button>
         )}
       </MapContainer>
-      <ReportsMarquee reports={reports} />
+      <ReportsMarquee reports={reports} onSelect={setPendingDeepLinkId} />
     </div>
   );
 }
 
-function ReportsMarquee({ reports }: { reports: any[] }) {
+function ReportsMarquee({ reports, onSelect }: { reports: any[]; onSelect: (id: string) => void }) {
   if (!reports || reports.length === 0) return null;
   const latestReports = reports.slice(0, 5);
 
-  const MarqueeItem = ({ report }: { report: any }) => (
-    <div className="flex items-center shrink-0 whitespace-nowrap gap-2 mx-8 text-blue-700 dark:text-cyan-400 text-[10px] uppercase tracking-widest">
+  const MarqueeItem = ({ report, index }: { report: any; index: number }) => (
+    <button
+      onClick={() => onSelect(report.id)}
+      className="flex items-center shrink-0 whitespace-nowrap gap-2 mx-8 text-blue-700 dark:text-cyan-400 text-[10px] uppercase tracking-widest cursor-pointer hover:opacity-70 transition-opacity"
+    >
+      <span className="font-bold text-blue-400 dark:text-cyan-600 tabular-nums">#{index + 1}</span>
       <span
         className="w-2 h-2 rounded-full"
         style={{
@@ -290,22 +294,22 @@ function ReportsMarquee({ reports }: { reports: any[] }) {
         ).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
         )
       </span>
-    </div>
+    </button>
   );
 
   return (
-    <div className="absolute bottom-0 left-0 w-full bg-white/90 dark:bg-black/90 border-t border-blue-500/30 dark:border-cyan-500/50 pt-2.5 z-[2000] overflow-hidden font-mono flex pointer-events-none" style={{ paddingBottom: "max(0.625rem, var(--sab))" }}>
+    <div className="absolute bottom-0 left-0 w-full bg-white/90 dark:bg-black/90 border-t border-blue-500/30 dark:border-cyan-500/50 pt-2.5 z-[2000] overflow-hidden font-mono flex" style={{ paddingBottom: "max(0.625rem, var(--sab))" }}>
       <div className="flex animate-marquee shrink-0 items-center justify-around min-w-full">
-        {latestReports.map((report) => (
-          <MarqueeItem key={`mq1-${report.id}`} report={report} />
+        {latestReports.map((report, i) => (
+          <MarqueeItem key={`mq1-${report.id}`} report={report} index={i} />
         ))}
       </div>
       <div
         aria-hidden="true"
         className="flex animate-marquee shrink-0 items-center justify-around min-w-full"
       >
-        {latestReports.map((report) => (
-          <MarqueeItem key={`mq2-${report.id}`} report={report} />
+        {latestReports.map((report, i) => (
+          <MarqueeItem key={`mq2-${report.id}`} report={report} index={i} />
         ))}
       </div>
     </div>
