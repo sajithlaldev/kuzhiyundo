@@ -96,6 +96,46 @@ export async function getReport(id: string): Promise<PotholeReport | null> {
 }
 
 // ---------------------------------------------------------------------------
+// SerializedReport — plain JSON-safe version of PotholeReport for SSR props.
+// imageUrl is intentionally excluded (base64, can be 100KB+ per doc).
+// createdAt is serialized as ISO string — component fallback handles this.
+// ---------------------------------------------------------------------------
+
+export type SerializedReport = Omit<PotholeReport, "createdAt" | "imageUrl"> & {
+  createdAt: string | null;
+};
+
+/**
+ * Fetch the most recent `limit` reports for SSR hydration.
+ * Returns plain, JSON-serializable objects safe to pass as Next.js props.
+ */
+export async function getRecentReports(limit = 200): Promise<SerializedReport[]> {
+  try {
+    const db = getAdminDb();
+    const snap = await db
+      .collection("potholes")
+      .orderBy("createdAt", "desc")
+      .limit(limit)
+      .get();
+
+    return snap.docs.map((d) => {
+      const data = d.data();
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { imageUrl, createdAt, ...rest } = data;
+      return {
+        id: d.id,
+        ...rest,
+        // Convert Timestamp → ISO string (JSON-serializable, component handles it)
+        createdAt: createdAt?.toDate?.()?.toISOString() ?? null,
+      } as SerializedReport;
+    });
+  } catch (err) {
+    console.error("[firebase-server] getRecentReports error:", err);
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // getAllReportStubs — fetch IDs + timestamps for sitemap (capped at 5000)
 // ---------------------------------------------------------------------------
 

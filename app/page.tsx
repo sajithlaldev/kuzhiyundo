@@ -1,11 +1,20 @@
 import MapLoader from "@/components/MapLoader";
+import { getRecentReports } from "@/lib/firebase-server";
 
-export default function Home() {
+// ISR: regenerate every 60 seconds so initial map data stays fresh.
+// onSnapshot handles real-time updates after hydration anyway.
+export const revalidate = 60;
+
+export default async function Home() {
+  // Pre-fetch recent reports server-side so the map has data on first paint.
+  // onSnapshot in LeafletPotholeMap takes over with live updates after hydration.
+  const initialReports = await getRecentReports(200);
+
   return (
     <main>
-      {/* Full-screen interactive map */}
+      {/* Full-screen interactive map — seeded with SSR data */}
       <div className="h-screen w-screen">
-        <MapLoader />
+        <MapLoader initialReports={initialReports} />
       </div>
 
       {/* Server-rendered content for SEO — visible on scroll */}
