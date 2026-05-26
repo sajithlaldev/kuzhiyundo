@@ -434,7 +434,6 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [constituencyMap, setConstituencyMap] = useState<Record<string, any>>({});
-  const [showSignInVotePrompt, setShowSignInVotePrompt] = useState(false);
   const map = useMap();
   const [zoom, setZoom] = useState(map.getZoom());
 
@@ -570,34 +569,37 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
     currentUpvoters: string[],
     currentDownvoters: string[],
   ) => {
-    if (!user) {
-      setShowSignInVotePrompt(true);
-      return;
+    let voter = user;
+    if (!voter) {
+      await loginAnonymously();
+      const { auth: firebaseAuth } = await import("../lib/firebase");
+      voter = firebaseAuth.currentUser;
+      if (!voter) return;
     }
     try {
       const upvoters = currentUpvoters || [];
       const downvoters = currentDownvoters || [];
-      const hasUpvoted = upvoters.includes(user.uid);
-      const hasDownvoted = downvoters.includes(user.uid);
+      const hasUpvoted = upvoters.includes(voter.uid);
+      const hasDownvoted = downvoters.includes(voter.uid);
 
       const updates: any = {};
 
       if (type === "up") {
         if (hasUpvoted) {
-          updates.upvoterIds = arrayRemove(user.uid);
+          updates.upvoterIds = arrayRemove(voter.uid);
         } else {
-          updates.upvoterIds = arrayUnion(user.uid);
+          updates.upvoterIds = arrayUnion(voter.uid);
           if (hasDownvoted) {
-            updates.downvoterIds = arrayRemove(user.uid);
+            updates.downvoterIds = arrayRemove(voter.uid);
           }
         }
       } else {
         if (hasDownvoted) {
-          updates.downvoterIds = arrayRemove(user.uid);
+          updates.downvoterIds = arrayRemove(voter.uid);
         } else {
-          updates.downvoterIds = arrayUnion(user.uid);
+          updates.downvoterIds = arrayUnion(voter.uid);
           if (hasUpvoted) {
-            updates.upvoterIds = arrayRemove(user.uid);
+            updates.upvoterIds = arrayRemove(voter.uid);
           }
         }
       }
@@ -1067,40 +1069,6 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
         })()}
       </AnimatePresence>
 
-      {showSignInVotePrompt && (
-        <SignInToVoteModal onClose={() => setShowSignInVotePrompt(false)} />
-      )}
-    </>
-  );
-}
-
-function SignInToVoteModal({ onClose }: { onClose: () => void }) {
-  return (
-    <>
-      <div
-        className="fixed inset-0 z-[2600] bg-white/60 dark:bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="fixed z-[2601] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(340px,90vw)] bg-white/95 dark:bg-black/95 border border-blue-500/40 dark:border-cyan-500/40 rounded-xl font-mono shadow-[0_0_40px_rgba(0,255,255,0.1)] p-5 flex flex-col gap-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="text-[9px] uppercase tracking-widest text-blue-700/60 dark:text-cyan-500/60">Sign in required</div>
-          <button onClick={onClose} className="text-blue-700/40 dark:text-cyan-500/40 hover:text-blue-600 dark:text-cyan-400 -mt-0.5">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="text-sm font-bold text-blue-600 dark:text-cyan-400">Vote on reports</div>
-          <p className="text-[11px] text-blue-600/70 dark:text-cyan-400/70 leading-relaxed">
-            Sign in to confirm or dispute pothole reports. Your identity is only used to prevent duplicate votes — it is never shared or displayed publicly.
-          </p>
-        </div>
-        <button
-          onClick={() => { loginWithGoogle(); onClose(); }}
-          className="w-full py-2.5 text-[11px] font-bold uppercase tracking-widest bg-blue-100 dark:bg-cyan-500/10 border border-blue-500 dark:border-cyan-500/50 text-blue-700 dark:text-cyan-400 hover:bg-blue-200 dark:hover:bg-cyan-500/20 transition-colors rounded"
-        >
-          Sign in with Google
-        </button>
-      </div>
     </>
   );
 }
