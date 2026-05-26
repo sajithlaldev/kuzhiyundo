@@ -1,6 +1,9 @@
 import { MetadataRoute } from "next";
 import { getAllReportStubs } from "@/lib/firebase-server";
 
+// Cloudflare Pages requires Edge Runtime for all dynamic routes.
+export const runtime = "edge";
+
 // Force dynamic so the sitemap is regenerated on each request (with ISR cache)
 // rather than being statically baked at build time with an empty Firestore snapshot.
 export const dynamic = "force-dynamic";

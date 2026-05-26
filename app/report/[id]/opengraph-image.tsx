@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
 import { getReport } from "@/lib/firebase-server";
 
-export const runtime = "nodejs";
+// Cloudflare Pages requires Edge Runtime for all dynamic routes.
+export const runtime = "edge";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

@@ -42,6 +42,9 @@ function getAdminDb(): Firestore {
 
   const dbId = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_DATABASE_ID || "(default)";
   adminDb = getFirestore(adminApp, dbId);
+  // Force HTTP REST transport — gRPC is unavailable on Cloudflare Edge Runtime
+  // even with nodejs_compat. preferRest uses the Firestore HTTP API instead.
+  adminDb.settings({ preferRest: true });
   return adminDb;
 }
 

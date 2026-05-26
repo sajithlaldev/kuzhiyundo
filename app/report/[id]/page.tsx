@@ -4,6 +4,10 @@ import Link from "next/link";
 import { getReport, PotholeReport } from "@/lib/firebase-server";
 import { decode } from "@googlemaps/polyline-codec";
 
+// Cloudflare Pages requires Edge Runtime for all dynamic routes.
+// nodejs_compat flag in wrangler.toml enables Node.js APIs needed by firebase-admin.
+export const runtime = "edge";
+
 // ISR: serve from cache; revalidate in background every 24 h.
 // Report metadata (address, constituency, severity) is immutable after filing.
 // Votes are allowed to be up to 24 h stale on this SEO page.
