@@ -1,7 +1,37 @@
+# Dependencies
 node_modules/
+
+# Next.js
 .next/
-coverage/
-.DS_Store
-*.log
+out/
+
+# Build
+dist/
+build/
+
+# TypeScript
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Environment
 .env*
 !.env.example
+
+# Testing
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
