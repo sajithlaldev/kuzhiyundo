@@ -26,6 +26,9 @@ importers:
       '@turf/boolean-point-in-polygon':
         specifier: ^7.3.5
         version: 7.3.5
+      '@turf/helpers':
+        specifier: ^7.3.5
+        version: 7.3.5
       '@vis.gl/react-google-maps':
         specifier: ^1.8.3
         version: 1.8.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
