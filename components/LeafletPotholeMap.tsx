@@ -93,8 +93,8 @@ const redMarkerIcon = L.divIcon({
   iconSize: [0, 0],
 });
 
-export default function LeafletPotholeMap() {
-  const [reports, setReports] = useState<any[]>([]);
+export default function LeafletPotholeMap({ initialReports }: { initialReports?: any[] }) {
+  const [reports, setReports] = useState<any[]>(initialReports ?? []);
   const [detailReportId, setDetailReportId] = useState<string | null>(null);
   const [pendingDeepLinkId, setPendingDeepLinkId] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
