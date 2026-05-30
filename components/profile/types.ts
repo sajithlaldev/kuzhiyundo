@@ -38,9 +38,17 @@ export const getColor = (severity?: string) => {
   }
 };
 
+export const parseFirestoreDate = (createdAt: any): Date | null => {
+  if (!createdAt) return null;
+  if (typeof createdAt.toDate === "function") return createdAt.toDate();
+  if (typeof createdAt.seconds === "number") return new Date(createdAt.seconds * 1000);
+  const date = new Date(createdAt);
+  return isNaN(date.getTime()) ? null : date;
+};
+
 export const formatDate = (date: Date | null) => {
   if (!date) return "—";
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString("en-IN", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -48,11 +56,9 @@ export const formatDate = (date: Date | null) => {
 };
 
 export const formatShortDate = (report: any) => {
-  const date =
-    report.createdAt?.toDate?.() ||
-    (report.createdAt ? new Date(report.createdAt) : null);
+  const date = parseFirestoreDate(report.createdAt);
   if (!date) return "—";
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString("en-IN", {
     month: "short",
     day: "numeric",
   });
@@ -80,8 +86,7 @@ export function computeUserStats(
     else if (r.severity === "medium") mediumSeverity++;
     else lowSeverity++;
 
-    const date =
-      r.createdAt?.toDate?.() || (r.createdAt ? new Date(r.createdAt) : null);
+    const date = parseFirestoreDate(r.createdAt);
     if (date) {
       if (!firstReportDate || date < firstReportDate) firstReportDate = date;
       if (!latestReportDate || date > latestReportDate) latestReportDate = date;

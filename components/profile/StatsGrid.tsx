@@ -32,7 +32,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
               : "text-red-500"
           }`}
         >
-          {stats.netVotes >= 0 ? "+" : ""}
+          {stats.netVotes > 0 ? "+" : ""}
           {stats.netVotes}
         </span>
         <span className="text-[8px] uppercase tracking-widest text-blue-500/60 dark:text-cyan-500/40 flex items-center gap-0.5">
