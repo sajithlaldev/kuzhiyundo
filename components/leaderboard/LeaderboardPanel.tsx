@@ -22,10 +22,11 @@ interface LeaderboardPanelProps {
 export default function LeaderboardPanel({
   isOpen,
   onClose,
-  reports,
+  reports = [],
 }: LeaderboardPanelProps) {
-  const leaderboard = useMemo(() => {
+  const { leaderboard, totalUpvotes } = useMemo(() => {
     const userMap = new Map<string, LeaderboardEntry>();
+    let totalUpvotes = 0;
 
     for (const report of reports) {
       const uid = report.userId;
@@ -33,6 +34,7 @@ export default function LeaderboardPanel({
 
       const existing = userMap.get(uid);
       const upvotes = (report.upvoterIds || []).length;
+      totalUpvotes += upvotes
       const downvotes = (report.downvoterIds || []).length;
 
       if (existing) {
@@ -52,11 +54,13 @@ export default function LeaderboardPanel({
       }
     }
 
-    return Array.from(userMap.values()).sort((a, b) => {
+    const sortedLeaderboard = Array.from(userMap.values()).sort((a, b) => {
       // Primary: report count desc, secondary: net votes desc
       if (b.reportCount !== a.reportCount) return b.reportCount - a.reportCount;
       return b.netVotes - a.netVotes;
     });
+
+    return { leaderboard: sortedLeaderboard, totalUpvotes };
   }, [reports]);
 
   const getRankIcon = (index: number) => {
@@ -150,10 +154,7 @@ export default function LeaderboardPanel({
               <div className="w-px h-8 bg-blue-200/50 dark:bg-cyan-500/20" />
               <div className="flex flex-col items-center">
                 <span className="text-lg font-bold text-blue-700 dark:text-cyan-400 tabular-nums">
-                  {reports.reduce(
-                    (sum, r) => sum + ((r.upvoterIds || []).length),
-                    0
-                  )}
+                  {totalUpvotes}
                 </span>
                 <span className="text-[9px] uppercase tracking-widest text-blue-500/70 dark:text-cyan-500/50">
                   Upvotes
@@ -186,11 +187,10 @@ export default function LeaderboardPanel({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className={`text-xs font-bold truncate ${
-                            index === 0
-                              ? "text-yellow-600 dark:text-yellow-400"
-                              : "text-blue-800 dark:text-cyan-300"
-                          }`}
+                          className={`text-xs font-bold truncate ${index === 0
+                            ? "text-yellow-600 dark:text-yellow-400"
+                            : "text-blue-800 dark:text-cyan-300"
+                            }`}
                         >
                           {entry.userName}
                         </span>
@@ -201,11 +201,10 @@ export default function LeaderboardPanel({
                           {entry.reportCount} report{entry.reportCount !== 1 ? "s" : ""}
                         </span>
                         <span
-                          className={`text-[10px] uppercase tracking-wider flex items-center gap-1 ${
-                            entry.netVotes >= 0
-                              ? "text-green-600 dark:text-green-400/70"
-                              : "text-red-500 dark:text-red-400/70"
-                          }`}
+                          className={`text-[10px] uppercase tracking-wider flex items-center gap-1 ${entry.netVotes >= 0
+                            ? "text-green-600 dark:text-green-400/70"
+                            : "text-red-500 dark:text-red-400/70"
+                            }`}
                         >
                           <ThumbsUp className="w-3 h-3" />
                           {entry.netVotes >= 0 ? "+" : ""}
@@ -217,15 +216,14 @@ export default function LeaderboardPanel({
                     {/* Score Badge */}
                     <div className="shrink-0 flex flex-col items-center">
                       <span
-                        className={`text-base font-bold tabular-nums ${
-                          index === 0
-                            ? "text-yellow-500 dark:text-yellow-400"
-                            : index === 1
+                        className={`text-base font-bold tabular-nums ${index === 0
+                          ? "text-yellow-500 dark:text-yellow-400"
+                          : index === 1
                             ? "text-gray-400 dark:text-gray-300"
                             : index === 2
-                            ? "text-amber-600 dark:text-amber-500"
-                            : "text-blue-600 dark:text-cyan-400"
-                        }`}
+                              ? "text-amber-600 dark:text-amber-500"
+                              : "text-blue-600 dark:text-cyan-400"
+                          }`}
                       >
                         {entry.reportCount}
                       </span>
