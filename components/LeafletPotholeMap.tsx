@@ -62,8 +62,10 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  Trophy,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import LeaderboardPanel from "./leaderboard/LeaderboardPanel";
 // Fix default marker icon issues in Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -101,6 +103,7 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
   const setUser = useAuthStore((state) => state.setUser);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   
   useEffect(() => setMounted(true), []);
 
@@ -252,17 +255,27 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
 
         <MapSearch />
         
-        {mounted && (
+      </MapContainer>
+      {mounted && (
+        <div className="absolute bottom-16 right-4 z-[1000] flex flex-col gap-2">
+          <button
+            onClick={() => setLeaderboardOpen(true)}
+            className="p-2 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:shadow-[0_0_12px_rgba(234,179,8,0.3)] transition-all"
+            title="Leaderboard"
+          >
+            <Trophy className="w-5 h-5" />
+          </button>
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="absolute bottom-16 right-4 z-[1000] p-2 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md text-blue-700 dark:text-cyan-400 hover:bg-neutral-100 dark:hover:bg-blue-100/40 dark:bg-cyan-900/40 transition-all"
+            className="p-2 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md text-blue-700 dark:text-cyan-400 hover:bg-neutral-100 dark:hover:bg-blue-100/40 dark:bg-cyan-900/40 transition-all"
             title="Toggle Theme"
           >
             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
-        )}
-      </MapContainer>
+        </div>
+      )}
       <ReportsMarquee reports={reports} onSelect={setPendingDeepLinkId} />
+      <LeaderboardPanel isOpen={leaderboardOpen} onClose={() => setLeaderboardOpen(false)} reports={reports} />
     </div>
   );
 }
