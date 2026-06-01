@@ -110,7 +110,7 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
     { uid: string; name: string; photoURL?: string } | null
   >(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
-  
+
   useEffect(() => setMounted(true), []);
 
   // Reporting state
@@ -1368,7 +1368,7 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
             {isLocating && (
               <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-blue-500 dark:text-white/50">
-                <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" strokeOpacity="0.25" /><path d="M12 2a10 10 0 0 1 10 10" /></svg>
                 Getting your location…
               </div>
             )}
@@ -1460,15 +1460,14 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
                   <button
                     key={s}
                     onClick={() => setSeverity(s)}
-                    className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all rounded ${
-                      severity === s
-                        ? s === "low" ? "bg-[#00b4c8] dark:bg-[#00f0ff] text-black border-[#00b4c8] dark:border-[#00f0ff] dark:shadow-[0_0_10px_#00f0ff]"
-                          : s === "medium" ? "bg-[#ff9900] text-black border-[#ff9900] dark:shadow-[0_0_10px_#ff9900]"
+                    className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-all rounded ${severity === s
+                      ? s === "low" ? "bg-[#00b4c8] dark:bg-[#00f0ff] text-black border-[#00b4c8] dark:border-[#00f0ff] dark:shadow-[0_0_10px_#00f0ff]"
+                        : s === "medium" ? "bg-[#ff9900] text-black border-[#ff9900] dark:shadow-[0_0_10px_#ff9900]"
                           : "bg-[#ff003c] text-white dark:text-black border-[#ff003c] dark:shadow-[0_0_10px_#ff003c]"
-                        : s === "low" ? "bg-transparent text-[#00889a] dark:text-[#00f0ff] border-[#00889a]/50 dark:border-[#00f0ff]/40"
-                          : s === "medium" ? "bg-transparent text-[#cc7700] dark:text-[#ff9900] border-[#cc7700]/50 dark:border-[#ff9900]/40"
+                      : s === "low" ? "bg-transparent text-[#00889a] dark:text-[#00f0ff] border-[#00889a]/50 dark:border-[#00f0ff]/40"
+                        : s === "medium" ? "bg-transparent text-[#cc7700] dark:text-[#ff9900] border-[#cc7700]/50 dark:border-[#ff9900]/40"
                           : "bg-transparent text-[#cc002e] dark:text-[#ff003c] border-[#cc002e]/50 dark:border-[#ff003c]/40"
-                    }`}
+                      }`}
                   >
                     {s}
                   </button>
@@ -2734,7 +2733,7 @@ function MapSearch() {
   };
 
   return (
-    <div className="absolute z-[1000] bottom-[calc(4.5rem_+_var(--sab))] left-4 right-16 md:bottom-auto md:top-[max(1rem,var(--sat))] md:left-auto md:right-4 md:w-64 flex flex-col pointer-events-none">
+    <div className="absolute z-[1000] bottom-[calc(3.8rem_+_var(--sab))] left-4 right-17 md:bottom-auto md:top-[max(1rem,var(--sat))] md:left-auto md:right-4 md:w-64 flex flex-col pointer-events-none">
       <div className="relative pointer-events-auto shadow-[0_0_15px_rgba(0,0,0,0.5)]">
         <input
           type="text"
