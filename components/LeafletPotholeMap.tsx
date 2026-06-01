@@ -1295,6 +1295,7 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
         imageUrl,
         upvoterIds: [],
       };
+      if (currentUser.photoURL) payload.userPhotoURL = currentUser.photoURL;
       if (notes.trim()) payload.notes = notes.trim();
       if (constituency) {
         payload.acName = constituency.acName;
@@ -2470,6 +2471,7 @@ function SubmitRouteForm({
         upvoterIds: [],
         ...(currentRouteDistance != null ? { distanceM: Math.round(currentRouteDistance) } : {}),
       };
+      if (user.photoURL) payload.userPhotoURL = user.photoURL;
       if (district) payload.district = district;
       if (pincode) payload.pincode = pincode;
       if (notes.trim()) payload.notes = notes.trim();

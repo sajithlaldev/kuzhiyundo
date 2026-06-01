@@ -25,6 +25,7 @@ export interface PotholeReport {
   id: string;
   userId: string;
   userName: string;
+  userPhotoURL?: string;
   encodedPath: string;
   createdAt: FSTimestamp | null;
   severity: "low" | "medium" | "high";
