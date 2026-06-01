@@ -103,7 +103,7 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
   const [pendingDeepLinkId, setPendingDeepLinkId] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
-  const { theme, setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileSubject, setProfileSubject] = useState<
@@ -200,14 +200,14 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
       <MapContainer
         center={[10.8505, 76.2711]}
         zoom={7}
-        style={{ width: "100%", height: "100%", background: mounted && theme === 'light' ? '#f1f5f9' : '#0f172a' }}
+        style={{ width: "100%", height: "100%", background: mounted && resolvedTheme === 'light' ? '#f1f5f9' : '#0f172a' }}
         attributionControl={false}
         zoomControl={false}
       >
         {mounted && (
           <TileLayer
-            key={theme}
-            url={theme === 'light' ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"}
+            key={resolvedTheme}
+            url={resolvedTheme === 'light' ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"}
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           />
         )}
@@ -296,11 +296,11 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
             </button>
           )}
           <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             className="p-2 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md text-blue-700 dark:text-cyan-400 hover:bg-neutral-100 dark:hover:bg-blue-100/40 dark:bg-cyan-900/40 transition-all"
             title="Toggle Theme"
           >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
         </div>
       )}
@@ -1515,7 +1515,7 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
   const mapRef = useRef<L.Map | null>(null);
   const [roadAuthority, setRoadAuthority] = useState(initialRoadAuthority);
   const [highwayTag, setHighwayTag] = useState(initialHighwayTag);
-  const { theme } = useTheme();
+  const { resolvedTheme: theme } = useTheme();
 
   const coords = decode(encodedPath).map(([lat, lng]) => [lat, lng] as [number, number]);
 
@@ -1536,7 +1536,7 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
 
     L.tileLayer(
       theme === 'light'
-        ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
       { maxZoom: 19 }
     ).addTo(map);
@@ -2742,7 +2742,7 @@ function MapSearch() {
           onFocus={() => setShowResults(true)}
           placeholder="SEARCH LOCATION..."
           style={{ fontSize: 16 }}
-          className="w-full bg-white/90 dark:bg-black/90 border border-blue-500/50 dark:border-cyan-500/50 text-blue-600 dark:text-cyan-400 pl-8 pr-3 py-2 uppercase tracking-widest outline-none focus:border-blue-400 dark:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] placeholder:text-blue-700/30 dark:text-cyan-500/30 font-mono backdrop-blur-md"
+          className="w-full bg-white/90 dark:bg-black/90 border border-blue-500/50 dark:border-cyan-500/50 text-blue-600 dark:text-cyan-400 pl-8 pr-3 py-2 uppercase tracking-widest outline-none focus:border-blue-400 dark:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] placeholder:text-blue-700/30 dark:placeholder:text-cyan-500/40 font-mono backdrop-blur-md"
         />
         <Search className="w-4 h-4 text-blue-700/50 dark:text-cyan-500/50 absolute left-2.5 top-1/2 -translate-y-1/2" />
 
