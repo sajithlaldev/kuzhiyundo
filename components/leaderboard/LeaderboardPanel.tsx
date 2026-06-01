@@ -7,10 +7,13 @@ import { X, Trophy, Flag, ThumbsUp, Award, Crown, Medal } from "lucide-react";
 interface LeaderboardEntry {
   userId: string;
   userName: string;
+  userPhotoURL?: string;
   reportCount: number;
   totalUpvotes: number;
   totalDownvotes: number;
   netVotes: number;
+  /** Combined score = reportCount + netVotes (upvotes − downvotes). */
+  score: number;
 }
 
 interface LeaderboardPanelProps {
@@ -42,26 +45,41 @@ export default function LeaderboardPanel({
         existing.totalUpvotes += upvotes;
         existing.totalDownvotes += downvotes;
         existing.netVotes += upvotes - downvotes;
+        existing.score += 1 + upvotes - downvotes;
+        // Backfill a photo from any of the user's reports that has one.
+        if (!existing.userPhotoURL && report.userPhotoURL) {
+          existing.userPhotoURL = report.userPhotoURL;
+        }
       } else {
         userMap.set(uid, {
           userId: uid,
           userName: report.userName || "Anonymous",
+          userPhotoURL: report.userPhotoURL || undefined,
           reportCount: 1,
           totalUpvotes: upvotes,
           totalDownvotes: downvotes,
           netVotes: upvotes - downvotes,
+          score: 1 + upvotes - downvotes,
         });
       }
     }
 
     const sortedLeaderboard = Array.from(userMap.values()).sort((a, b) => {
-      // Primary: report count desc, secondary: net votes desc
-      if (b.reportCount !== a.reportCount) return b.reportCount - a.reportCount;
-      return b.netVotes - a.netVotes;
+      // Primary: combined score (reports + net votes) desc,
+      // tiebreak by report count desc.
+      if (b.score !== a.score) return b.score - a.score;
+      return b.reportCount - a.reportCount;
     });
 
     return { leaderboard: sortedLeaderboard, totalUpvotes };
   }, [reports]);
+
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
   const getRankIcon = (index: number) => {
     switch (index) {
@@ -183,6 +201,20 @@ export default function LeaderboardPanel({
                     {/* Rank */}
                     <div className="shrink-0">{getRankIcon(index)}</div>
 
+                    {/* Avatar */}
+                    {entry.userPhotoURL ? (
+                      <img
+                        src={entry.userPhotoURL}
+                        alt={entry.userName}
+                        referrerPolicy="no-referrer"
+                        className="shrink-0 w-8 h-8 rounded-full border border-blue-300/60 dark:border-cyan-500/40 object-cover"
+                      />
+                    ) : (
+                      <div className="shrink-0 w-8 h-8 rounded-full border border-blue-300/60 dark:border-cyan-500/40 bg-blue-100 dark:bg-cyan-900/50 flex items-center justify-center text-[10px] font-bold text-blue-500 dark:text-cyan-400">
+                        {getInitials(entry.userName)}
+                      </div>
+                    )}
+
                     {/* User Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -208,7 +240,7 @@ export default function LeaderboardPanel({
                         >
                           <ThumbsUp className="w-3 h-3" />
                           {entry.netVotes >= 0 ? "+" : ""}
-                          {entry.netVotes}
+                          {entry.netVotes} net
                         </span>
                       </div>
                     </div>
@@ -225,7 +257,7 @@ export default function LeaderboardPanel({
                               : "text-blue-600 dark:text-cyan-400"
                           }`}
                       >
-                        {entry.reportCount}
+                        {entry.score}
                       </span>
                       <span className="text-[8px] uppercase tracking-widest text-blue-400/60 dark:text-cyan-500/40">
                         pts
@@ -239,7 +271,7 @@ export default function LeaderboardPanel({
             {/* Footer */}
             <div className="px-4 py-2 border-t border-blue-200/50 dark:border-cyan-500/20 bg-blue-50/30 dark:bg-cyan-950/30">
               <p className="text-[9px] font-mono uppercase tracking-widest text-blue-400/60 dark:text-cyan-500/40 text-center">
-                Ranked by reports submitted • Updated live
+                Ranked by reports + net votes • Updated live
               </p>
             </div>
           </motion.div>

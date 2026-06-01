@@ -96,16 +96,24 @@ export function computeUserStats(
     locationCounts.set(loc, (locationCounts.get(loc) || 0) + 1);
   }
 
-  // Calculate rank among all contributors
-  const userReportCounts = new Map<string, number>();
+  // Calculate rank among all contributors.
+  // Score = reportCount + netVotes (upvotes − downvotes), tiebroken by
+  // reportCount — matches the leaderboard ranking in LeaderboardPanel.
+  const userScores = new Map<string, { score: number; reportCount: number }>();
   for (const r of allReports) {
     if (!r.userId) continue;
-    userReportCounts.set(r.userId, (userReportCounts.get(r.userId) || 0) + 1);
+    const upvotes = (r.upvoterIds || []).length;
+    const downvotes = (r.downvoterIds || []).length;
+    const agg = userScores.get(r.userId) || { score: 0, reportCount: 0 };
+    agg.score += 1 + upvotes - downvotes;
+    agg.reportCount += 1;
+    userScores.set(r.userId, agg);
   }
-  const sortedCounts = Array.from(userReportCounts.entries()).sort(
-    (a, b) => b[1] - a[1]
-  );
-  const rank = sortedCounts.findIndex(([uid]) => uid === userId) + 1;
+  const sortedScores = Array.from(userScores.entries()).sort((a, b) => {
+    if (b[1].score !== a[1].score) return b[1].score - a[1].score;
+    return b[1].reportCount - a[1].reportCount;
+  });
+  const rank = sortedScores.findIndex(([uid]) => uid === userId) + 1;
 
   // Top location
   let topLocation = "N/A";
@@ -126,7 +134,7 @@ export function computeUserStats(
     mediumSeverity,
     lowSeverity,
     rank: rank || 0,
-    totalContributors: userReportCounts.size,
+    totalContributors: userScores.size,
     firstReportDate,
     latestReportDate,
     topLocation,
