@@ -498,6 +498,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
     "low",
   );
   const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
+  const [editReporterName, setEditReporterName] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [constituencyMap, setConstituencyMap] = useState<Record<string, any>>({});
@@ -610,6 +611,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
     try {
       const updates: any = {
         severity: editSeverity,
+        userName: editReporterName.trim() || "Anonymous",
       };
       if (editNotes.trim()) {
         updates.notes = editNotes.trim();
@@ -622,6 +624,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
         updates.imageUrl = deleteField();
       }
       await updateDoc(doc(db, "potholes", id), updates);
+      saveReporterName(editReporterName);
       setEditingId(null);
     } catch (err) {
       console.error("Failed to update", err);
@@ -874,6 +877,20 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
               <div className="mt-2 flex flex-col items-start gap-2 border-t pt-2 border-blue-500/30 dark:border-cyan-500/30">
                 <div className="w-full">
                   <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
+                    Reported As
+                  </label>
+                  <input
+                    type="text"
+                    value={editReporterName}
+                    onChange={(e) =>
+                      setEditReporterName(clampReporterName(e.target.value))
+                    }
+                    placeholder="Anonymous"
+                    className="w-full bg-blue-100/20 dark:bg-cyan-900/20 text-blue-600 dark:text-cyan-400 border border-blue-500/50 dark:border-cyan-500/50 p-1 mt-1 text-[10px] outline-none focus:border-blue-400 dark:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] transition-all placeholder:text-blue-400/50 dark:placeholder:text-cyan-500/30"
+                  />
+                </div>
+                <div className="w-full">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
                     Severity
                   </label>
                   <select
@@ -972,6 +989,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
                     setEditNotes(report.notes || "");
                     setEditSeverity(report.severity || "low");
                     setEditImageUrl(report.imageUrl || null);
+                    setEditReporterName(report.userName || "");
                     setEditingId(report.id);
                   }}
                   className="flex-1 flex items-center justify-center gap-1 bg-blue-100 dark:bg-cyan-500/10 hover:bg-blue-200 dark:hover:bg-cyan-500/20 text-blue-700 dark:text-cyan-400 border border-blue-400 dark:border-cyan-500/50 px-2 py-1.5 text-[10px] uppercase tracking-widest font-bold transition-colors dark:shadow-[0_0_10px_rgba(0,255,255,0.1)]"
