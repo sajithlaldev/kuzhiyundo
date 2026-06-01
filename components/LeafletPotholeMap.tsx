@@ -2734,7 +2734,7 @@ function MapSearch() {
   };
 
   return (
-    <div className="absolute z-[1000] bottom-[calc(4.5rem_+_var(--sab))] left-4 right-4 md:bottom-auto md:top-[max(1rem,var(--sat))] md:left-auto md:w-64 flex flex-col pointer-events-none">
+    <div className="absolute z-[1000] bottom-[calc(4.5rem_+_var(--sab))] left-4 right-16 md:bottom-auto md:top-[max(1rem,var(--sat))] md:left-auto md:right-4 md:w-64 flex flex-col pointer-events-none">
       <div className="relative pointer-events-auto shadow-[0_0_15px_rgba(0,0,0,0.5)]">
         <input
           type="text"
