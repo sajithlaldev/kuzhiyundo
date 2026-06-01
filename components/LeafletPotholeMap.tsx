@@ -63,6 +63,10 @@ import {
   Sun,
   Moon,
   Trophy,
+  UserCircle,
+} from "lucide-react";
+import { useTheme } from "next-themes";
+import ProfilePanel from "./profile/ProfilePanel";
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import LeaderboardPanel from "./leaderboard/LeaderboardPanel";
@@ -103,6 +107,7 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
   const setUser = useAuthStore((state) => state.setUser);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   
   useEffect(() => setMounted(true), []);
@@ -254,6 +259,31 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
         />
 
         <MapSearch />
+      </MapContainer>
+
+      {/* Control buttons — outside MapContainer for reliable rendering */}
+      {mounted && (
+        <div className="absolute bottom-16 right-4 z-[1000] flex flex-col gap-2">
+          {/* Profile — only when logged in (non-anonymous) */}
+          {user && !user.isAnonymous && (
+            <button
+              onClick={() => setProfileOpen(true)}
+              className="p-1.5 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md overflow-hidden hover:shadow-[0_0_12px_rgba(0,100,255,0.2)] dark:hover:shadow-[0_0_12px_rgba(0,255,255,0.2)] transition-all"
+              title="Profile"
+            >
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="w-5 h-5 rounded-sm"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <UserCircle className="w-5 h-5 text-blue-600 dark:text-cyan-400" />
+              )}
+            </button>
+          )}
+          {/* Theme toggle */}
         
       </MapContainer>
       {mounted && (
@@ -273,6 +303,20 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
         </div>
+      )}
+
+      <ReportsMarquee reports={reports} onSelect={setPendingDeepLinkId} />
+
+      {/* Profile Panel — only when user is logged in */}
+      {user && !user.isAnonymous && (
+        <ProfilePanel
+          isOpen={profileOpen}
+          onClose={() => setProfileOpen(false)}
+          user={user}
+          reports={reports}
+          onLogout={logout}
+          onNavigateToReport={(id) => { setProfileOpen(false); setPendingDeepLinkId(id); }}
+        />
       )}
       <ReportsMarquee reports={reports} onSelect={setPendingDeepLinkId} />
       <LeaderboardPanel isOpen={leaderboardOpen} onClose={() => setLeaderboardOpen(false)} reports={reports} />
