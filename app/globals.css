@@ -24,6 +24,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-handwriting: var(--font-handwriting);
+  --font-malayalam: var(--font-malayalam);
 }
 
 /* Kill Leaflet's popup open/close animation (the "jiggle" on click) */

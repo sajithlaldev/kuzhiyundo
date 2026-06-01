@@ -2182,32 +2182,57 @@ function ReportingOverlay({
                       strokeLinejoin="round"
                       className="w-5 h-5 md:w-6 md:h-6"
                     >
+                      <defs>
+                        {/* 3D gloss + shadow — sits over currentColor, adapts to both themes */}
+                        <linearGradient id="kzPin3d" x1="7" y1="2" x2="17" y2="23" gradientUnits="userSpaceOnUse">
+                          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
+                          <stop offset="40%" stopColor="#ffffff" stopOpacity="0" />
+                          <stop offset="60%" stopColor="#000000" stopOpacity="0" />
+                          <stop offset="100%" stopColor="#000000" stopOpacity="0.45" />
+                        </linearGradient>
+                        {/* crater inner shadow for depth */}
+                        <linearGradient id="kzCrater" x1="12" y1="6.9" x2="12" y2="11.8" gradientUnits="userSpaceOnUse">
+                          <stop offset="0%" stopColor="#000000" stopOpacity="0.45" />
+                          <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      {/* map pin — curvy teardrop */}
                       <path
-                        d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                        d="M12 2C7.7 2 4.2 5.5 4.2 9.8c0 3 2 6 4 8.2.9 1 1.8 1.8 2.5 2.4.7.6 1.9.6 2.6 0 .7-.6 1.6-1.4 2.5-2.4 2-2.2 4-5.2 4-8.2C19.8 5.5 16.3 2 12 2Z"
                         fill="currentColor"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      />
-                      <path
-                        d="M12 7.5 l1.5 0.5 l0.5 1.5 l-0.5 1 l1.5 0.5 l-1.5 1.5 l-1.5 -0.5 l-1 1.5 l-1 -1.5 l-1.5 -0.5 l0.5 -1 l-1 -1.5 l1.5 -0.5 l1 -1 Z"
-                        fill="black"
-                        stroke="black"
-                        strokeWidth="1"
-                        strokeLinejoin="miter"
-                      />
-                      <circle cx="16" cy="7" r="1.5" fill="black" stroke="none" />
-                      <circle cx="8" cy="12" r="1" fill="black" stroke="none" />
-                      <circle
-                        cx="15"
-                        cy="13"
-                        r="0.8"
-                        fill="black"
                         stroke="none"
+                      />
+                      {/* 3D shading overlay */}
+                      <path
+                        d="M12 2C7.7 2 4.2 5.5 4.2 9.8c0 3 2 6 4 8.2.9 1 1.8 1.8 2.5 2.4.7.6 1.9.6 2.6 0 .7-.6 1.6-1.4 2.5-2.4 2-2.2 4-5.2 4-8.2C19.8 5.5 16.3 2 12 2Z"
+                        fill="url(#kzPin3d)"
+                        stroke="none"
+                      />
+                      {/* pothole crater (hole — adapts to theme surface) */}
+                      <path
+                        d="M8.2 9.4C8.1 8.5 8.9 8 9.6 7.7 10.2 7.5 10.6 7.8 11.2 7.6 12.1 7.3 12.9 7 13.8 7.3 14.7 7.6 15.8 7.9 15.7 8.8 15.6 9.5 15.9 9.9 15.3 10.5 14.6 11.1 13.4 11 12.4 11.3 11.3 11.6 10 11.6 9.1 11 8.5 10.6 8.3 10.1 8.2 9.4Z"
+                        className="fill-white dark:fill-[#0a0e17]"
+                        stroke="none"
+                      />
+                      {/* crater depth shadow */}
+                      <path
+                        d="M8.2 9.4C8.1 8.5 8.9 8 9.6 7.7 10.2 7.5 10.6 7.8 11.2 7.6 12.1 7.3 12.9 7 13.8 7.3 14.7 7.6 15.8 7.9 15.7 8.8 15.6 9.5 15.9 9.9 15.3 10.5 14.6 11.1 13.4 11 12.4 11.3 11.3 11.6 10 11.6 9.1 11 8.5 10.6 8.3 10.1 8.2 9.4Z"
+                        fill="url(#kzCrater)"
+                        stroke="none"
+                      />
+                      {/* crater rim highlight */}
+                      <path
+                        d="M9.2 8.4C10 7.9 10.9 7.8 11.6 7.9 12.6 8 13.4 7.8 14.2 8.1"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="0.7"
+                        strokeOpacity="0.45"
+                        strokeLinecap="round"
                       />
                     </svg>
                   </span>
-                  <span className="font-handwriting text-2xl md:text-3xl tracking-normal normal-case font-normal">
-                    Kuzhiyundo?
+                  <span lang="ml" className="font-malayalam text-lg md:text-xl tracking-normal normal-case font-normal">
+                    കുഴിയുണ്ടോ?
                   </span>
                 </h1>
                 <div className="text-[9px] md:text-[10px] text-blue-700/80 dark:text-cyan-500/80 mt-1 uppercase tracking-widest font-semibold flex items-center gap-1 overflow-hidden h-4 md:h-5">
