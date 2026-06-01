@@ -19,6 +19,8 @@ interface ContributionsListProps {
   stats: UserStats;
   onNavigateToReport?: (reportId: string) => void;
   onClose: () => void;
+  /** Whether the viewer owns these reports (controls the delete action). */
+  canManage?: boolean;
 }
 
 export default function ContributionsList({
@@ -26,6 +28,7 @@ export default function ContributionsList({
   stats,
   onNavigateToReport,
   onClose,
+  canManage = true,
 }: ContributionsListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingInProgress, setDeletingInProgress] = useState(false);
@@ -69,7 +72,9 @@ export default function ContributionsList({
               No contributions yet
             </span>
             <span className="text-[10px] mt-1 text-blue-400/60 dark:text-cyan-500/30">
-              Your reports will appear here
+              {canManage
+                ? "Your reports will appear here"
+                : "This contributor's reports will appear here"}
             </span>
           </div>
         ) : (
@@ -145,17 +150,19 @@ export default function ContributionsList({
                       <ExternalLink className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <button
-                    onClick={() =>
-                      setDeletingId(
-                        deletingId === report.id ? null : report.id
-                      )
-                    }
-                    className="p-1.5 rounded text-blue-400/50 dark:text-cyan-500/30 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                    title="Delete report"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {canManage && (
+                    <button
+                      onClick={() =>
+                        setDeletingId(
+                          deletingId === report.id ? null : report.id
+                        )
+                      }
+                      className="p-1.5 rounded text-blue-400/50 dark:text-cyan-500/30 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                      title="Delete report"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
 

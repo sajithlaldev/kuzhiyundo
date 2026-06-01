@@ -106,6 +106,9 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [profileSubject, setProfileSubject] = useState<
+    { uid: string; name: string; photoURL?: string } | null
+  >(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   
   useEffect(() => setMounted(true), []);
@@ -262,10 +265,21 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
       {/* Control buttons — outside MapContainer for reliable rendering */}
       {mounted && (
         <div className="absolute bottom-16 right-4 z-[1000] flex flex-col gap-2">
+          {/* Leaderboard */}
+          <button
+            onClick={() => setLeaderboardOpen(true)}
+            className="p-2 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:shadow-[0_0_12px_rgba(234,179,8,0.3)] transition-all"
+            title="Leaderboard"
+          >
+            <Trophy className="w-5 h-5" />
+          </button>
           {/* Profile — only when logged in (non-anonymous) */}
           {user && !user.isAnonymous && (
             <button
-              onClick={() => setProfileOpen(true)}
+              onClick={() => {
+                setProfileSubject(null);
+                setProfileOpen(true);
+              }}
               className="p-1.5 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md overflow-hidden hover:shadow-[0_0_12px_rgba(0,100,255,0.2)] dark:hover:shadow-[0_0_12px_rgba(0,255,255,0.2)] transition-all"
               title="Profile"
             >
@@ -281,14 +295,6 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
               )}
             </button>
           )}
-          {/* Leaderboard */}
-          <button
-            onClick={() => setLeaderboardOpen(true)}
-            className="p-2 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:shadow-[0_0_12px_rgba(234,179,8,0.3)] transition-all"
-            title="Leaderboard"
-          >
-            <Trophy className="w-5 h-5" />
-          </button>
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="p-2 bg-white/90 dark:bg-black/90 border border-neutral-200 dark:border-cyan-500/30 rounded shadow-md text-blue-700 dark:text-cyan-400 hover:bg-neutral-100 dark:hover:bg-blue-100/40 dark:bg-cyan-900/40 transition-all"
@@ -301,19 +307,29 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
 
       <ReportsMarquee reports={reports} onSelect={setPendingDeepLinkId} />
 
-      {/* Profile Panel — only when user is logged in */}
-      {user && !user.isAnonymous && (
+      {/* Profile Panel — own profile (logged in) or any contributor's public profile */}
+      {((user && !user.isAnonymous) || profileSubject) && (
         <ProfilePanel
           isOpen={profileOpen}
           onClose={() => setProfileOpen(false)}
-          user={user}
+          user={user ?? null}
+          subject={profileSubject ?? undefined}
           reports={reports}
           onLogout={logout}
           onNavigateToReport={(id) => { setProfileOpen(false); setPendingDeepLinkId(id); }}
         />
       )}
       <ReportsMarquee reports={reports} onSelect={setPendingDeepLinkId} />
-      <LeaderboardPanel isOpen={leaderboardOpen} onClose={() => setLeaderboardOpen(false)} reports={reports} />
+      <LeaderboardPanel
+        isOpen={leaderboardOpen}
+        onClose={() => setLeaderboardOpen(false)}
+        reports={reports}
+        onSelectUser={(u) => {
+          setProfileSubject(u);
+          setLeaderboardOpen(false);
+          setProfileOpen(true);
+        }}
+      />
     </div>
   );
 }

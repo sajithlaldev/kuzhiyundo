@@ -20,12 +20,15 @@ interface LeaderboardPanelProps {
   isOpen: boolean;
   onClose: () => void;
   reports: any[];
+  /** Called when a row is clicked to open that contributor's profile. */
+  onSelectUser?: (u: { uid: string; name: string; photoURL?: string }) => void;
 }
 
 export default function LeaderboardPanel({
   isOpen,
   onClose,
   reports = [],
+  onSelectUser,
 }: LeaderboardPanelProps) {
   const { leaderboard, totalUpvotes } = useMemo(() => {
     const userMap = new Map<string, LeaderboardEntry>();
@@ -191,12 +194,21 @@ export default function LeaderboardPanel({
                 </div>
               ) : (
                 leaderboard.map((entry, index) => (
-                  <motion.div
+                  <motion.button
                     key={entry.userId}
+                    type="button"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.04, duration: 0.3 }}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all font-mono ${getRankBorder(index)} hover:scale-[1.01] hover:shadow-md`}
+                    onClick={() =>
+                      onSelectUser?.({
+                        uid: entry.userId,
+                        name: entry.userName,
+                        photoURL: entry.userPhotoURL,
+                      })
+                    }
+                    disabled={!onSelectUser}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all font-mono ${getRankBorder(index)} hover:scale-[1.01] hover:shadow-md ${onSelectUser ? "cursor-pointer" : "cursor-default"}`}
                   >
                     {/* Rank */}
                     <div className="shrink-0">{getRankIcon(index)}</div>
@@ -263,7 +275,7 @@ export default function LeaderboardPanel({
                         pts
                       </span>
                     </div>
-                  </motion.div>
+                  </motion.button>
                 ))
               )}
             </div>

@@ -15,13 +15,23 @@ export interface UserStats {
   topLocation: string;
 }
 
+/** A user whose profile is being viewed (used when it isn't the logged-in user). */
+export interface ProfileSubject {
+  uid: string;
+  name: string;
+  photoURL?: string;
+}
+
 export interface ProfilePanelProps {
   isOpen: boolean;
   onClose: () => void;
-  user: FirebaseUser;
+  /** The logged-in user, or null when signed out / anonymous viewing a public profile. */
+  user: FirebaseUser | null;
   reports: any[];
   onLogout: () => void;
   onNavigateToReport?: (reportId: string) => void;
+  /** When set, view this user's public profile instead of the logged-in user's. */
+  subject?: ProfileSubject;
 }
 
 export type PanelView = "profile" | "contributions";

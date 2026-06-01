@@ -19,18 +19,32 @@ export default function ProfilePanel({
   reports = [],
   onLogout,
   onNavigateToReport,
+  subject,
 }: ProfilePanelProps) {
   const [view, setView] = useState<PanelView>("profile");
 
+  // Whose profile is shown: an explicit subject, else the logged-in user.
+  const subjectUid = subject?.uid ?? user?.uid ?? "";
+  const isOwnProfile = !subject || subject.uid === user?.uid;
+
   const myReports = useMemo(
-    () => reports.filter((r) => r.userId === user.uid),
-    [reports, user.uid]
+    () => reports.filter((r) => r.userId === subjectUid),
+    [reports, subjectUid]
   );
 
   const stats = useMemo(
-    () => computeUserStats(myReports, reports, user.uid),
-    [reports, myReports, user.uid]
+    () => computeUserStats(myReports, reports, subjectUid),
+    [reports, myReports, subjectUid]
   );
+
+  // Display identity for the header / UserCard.
+  const displayName = isOwnProfile
+    ? user?.displayName || "Anonymous User"
+    : subject?.name || "Anonymous User";
+  const displayPhoto = isOwnProfile ? user?.photoURL : subject?.photoURL;
+  const subtitle = isOwnProfile
+    ? user?.email || (user?.isAnonymous ? "Anonymous account" : "No email")
+    : undefined;
 
   // Reset view when panel closes
   const handleClose = () => {
@@ -75,8 +89,14 @@ export default function ProfilePanel({
               ) : (
                 <FileText className="w-5 h-5 text-blue-600 dark:text-cyan-400" />
               )}
-              <h2 className="text-sm font-bold uppercase tracking-widest text-blue-800 dark:text-cyan-400 font-mono">
-                {view === "profile" ? "Profile" : "My Contributions"}
+              <h2 className="text-sm font-bold uppercase tracking-widest text-blue-800 dark:text-cyan-400 font-mono truncate max-w-[200px]">
+                {view === "contributions"
+                  ? isOwnProfile
+                    ? "My Contributions"
+                    : "Contributions"
+                  : isOwnProfile
+                    ? "Profile"
+                    : displayName}
               </h2>
             </div>
             <div className="flex items-center gap-1">
@@ -102,7 +122,12 @@ export default function ProfilePanel({
           {view === "profile" && (
             <>
               <div className="flex-1 overflow-y-auto">
-                <UserCard user={user} stats={stats} />
+                <UserCard
+                  name={displayName}
+                  photoURL={displayPhoto}
+                  subtitle={subtitle}
+                  stats={stats}
+                />
                 <StatsGrid stats={stats} />
                 <SeverityBreakdown stats={stats} />
                 <ActivityDetails stats={stats} />
@@ -115,7 +140,7 @@ export default function ProfilePanel({
                   >
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4" />
-                      <span>My Contributions</span>
+                      <span>{isOwnProfile ? "My Contributions" : "Contributions"}</span>
                       <span className="text-[9px] font-normal normal-case px-1.5 py-0.5 rounded bg-blue-200/50 dark:bg-cyan-800/40 text-blue-600 dark:text-cyan-400 tabular-nums">
                         {myReports.length}
                       </span>
@@ -132,25 +157,29 @@ export default function ProfilePanel({
                       No reports yet
                     </div>
                     <div className="text-[10px] text-blue-400/70 dark:text-cyan-500/40 max-w-[220px]">
-                      Start reporting potholes on the map to see your stats here!
+                      {isOwnProfile
+                        ? "Start reporting potholes on the map to see your stats here!"
+                        : "This contributor hasn't reported any potholes yet."}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Logout button */}
-              <div className="px-4 py-3 border-t border-blue-200/50 dark:border-cyan-500/20 bg-blue-50/30 dark:bg-cyan-950/30">
-                <button
-                  onClick={() => {
-                    onLogout();
-                    handleClose();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 text-[11px] font-bold uppercase tracking-widest font-mono text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-500/30 rounded hover:bg-red-100 dark:hover:bg-red-900/30 hover:border-red-300 dark:hover:border-red-500/50 transition-all"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </button>
-              </div>
+              {/* Logout button — only on own profile */}
+              {isOwnProfile && (
+                <div className="px-4 py-3 border-t border-blue-200/50 dark:border-cyan-500/20 bg-blue-50/30 dark:bg-cyan-950/30">
+                  <button
+                    onClick={() => {
+                      onLogout();
+                      handleClose();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 text-[11px] font-bold uppercase tracking-widest font-mono text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-500/30 rounded hover:bg-red-100 dark:hover:bg-red-900/30 hover:border-red-300 dark:hover:border-red-500/50 transition-all"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </>
           )}
 
@@ -161,6 +190,7 @@ export default function ProfilePanel({
               stats={stats}
               onNavigateToReport={onNavigateToReport}
               onClose={handleClose}
+              canManage={isOwnProfile}
             />
           )}
         </motion.div>
