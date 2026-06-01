@@ -38,6 +38,10 @@ export default function LeaderboardPanel({
       const uid = report.userId;
       if (!uid) continue;
 
+      // Exclude anonymous contributors from the leaderboard (case-insensitive).
+      const name = (report.userName || "").trim();
+      if (name.toLowerCase() === "anonymous") continue;
+
       const existing = userMap.get(uid);
       const upvotes = (report.upvoterIds || []).length;
       totalUpvotes += upvotes
