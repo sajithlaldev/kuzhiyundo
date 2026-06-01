@@ -1186,14 +1186,51 @@ function getGeotagPlatform(): "ios" | "android" | "other" {
   return "other";
 }
 
+const REPORTER_NAME_KEY = "kuzhiyundo:reporterName";
+const MAX_REPORTER_NAME = 50;
+
+function clampReporterName(name: string): string {
+  return name.slice(0, MAX_REPORTER_NAME);
+}
+
+function getStoredReporterName(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return clampReporterName(window.localStorage.getItem(REPORTER_NAME_KEY) || "");
+  } catch {
+    return "";
+  }
+}
+
+function saveReporterName(name: string): void {
+  if (typeof window === "undefined") return;
+  const trimmed = clampReporterName(name.trim());
+  if (!trimmed) return;
+  try {
+    window.localStorage.setItem(REPORTER_NAME_KEY, trimmed);
+  } catch {
+    // ignore storage failures (private mode, quota, etc.)
+  }
+}
+
 
 function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
+  const user = useAuthStore((state) => state.user);
   const [step, setStep] = useState<"upload" | "form">("upload");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  const [reporterName, setReporterName] = useState("");
+  const [reporterName, setReporterName] = useState(
+    () => clampReporterName(getStoredReporterName() || user?.displayName || ""),
+  );
+  const reporterNameTouched = useRef(false);
+  // Auth may resolve after this modal mounts; fill the display name once if the
+  // field is still empty, there's no stored default, and the user hasn't typed.
+  useEffect(() => {
+    if (reporterNameTouched.current || reporterName || getStoredReporterName()) return;
+    if (user?.displayName) setReporterName(clampReporterName(user.displayName));
+  }, [user, reporterName]);
   const [severity, setSeverity] = useState<"low" | "medium" | "high">("low");
   const [notes, setNotes] = useState("");
   const [address, setAddress] = useState<string>("Locating...");
@@ -1329,6 +1366,7 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
         payload.roadAuthority = roadInfo.roadAuthority;
       }
 
+      saveReporterName(reporterName);
       await addDoc(collection(db, "potholes"), payload);
       onClose();
     } catch (e) {
@@ -1447,7 +1485,10 @@ function GeoPhotoReportModal({ onClose }: { onClose: () => void }) {
               <input
                 type="text"
                 value={reporterName}
-                onChange={(e) => setReporterName(e.target.value.slice(0, 50))}
+                onChange={(e) => {
+                  reporterNameTouched.current = true;
+                  setReporterName(clampReporterName(e.target.value));
+                }}
                 placeholder="Anonymous"
                 className="text-[11px] text-blue-800 dark:text-white/80 bg-blue-50 dark:bg-white/5 border border-blue-200 dark:border-white/20 p-2 rounded placeholder:text-blue-400/50 dark:placeholder:text-white/20 outline-none focus:border-blue-400 dark:focus:border-white/40"
               />
@@ -2377,6 +2418,17 @@ function SubmitRouteForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
+  const [reporterName, setReporterName] = useState(
+    () => clampReporterName(getStoredReporterName() || user?.displayName || user?.email || ""),
+  );
+  const reporterNameTouched = useRef(false);
+  // Auth may resolve after this form mounts; fill the display name once if the
+  // field is still empty, there's no stored default, and the user hasn't typed.
+  useEffect(() => {
+    if (reporterNameTouched.current || reporterName || getStoredReporterName()) return;
+    const fallback = user?.displayName || user?.email;
+    if (fallback) setReporterName(clampReporterName(fallback));
+  }, [user, reporterName]);
   const [address, setAddress] = useState<string>("Locating...");
   const [district, setDistrict] = useState<string | null>(null);
   const [pincode, setPincode] = useState<string | null>(null);
@@ -2477,7 +2529,7 @@ function SubmitRouteForm({
 
       const payload: any = {
         userId: user.uid,
-        userName: user.displayName || user.email || "Anonymous",
+        userName: reporterName.trim() || user.displayName || user.email || "Anonymous",
         encodedPath: currentPathEncoded,
         createdAt: serverTimestamp(),
         status: "reported",
@@ -2507,6 +2559,7 @@ function SubmitRouteForm({
         payload.roadAuthority = roadInfo.roadAuthority;
       }
 
+      saveReporterName(reporterName);
       await addDoc(collection(db, "potholes"), payload);
       onCancel(); // Reset and close
     } catch (e) {
@@ -2530,12 +2583,16 @@ function SubmitRouteForm({
         <label className="text-[10px] uppercase font-bold tracking-widest text-blue-700/70 dark:text-cyan-500/70 border-l-2 border-blue-500 dark:border-cyan-500 pl-2">
           Reporting As
         </label>
-        <p className="text-[10px] text-blue-500 dark:text-cyan-300 bg-blue-100/30 dark:bg-cyan-900/30 border border-blue-500/30 dark:border-cyan-500/30 p-2 truncate">
-          {(user?.displayName || user?.email || "Anonymous").substring(0, 20)}
-          {(user?.displayName || user?.email || "Anonymous").length > 20
-            ? "..."
-            : ""}
-        </p>
+        <input
+          type="text"
+          value={reporterName}
+          onChange={(e) => {
+            reporterNameTouched.current = true;
+            setReporterName(clampReporterName(e.target.value));
+          }}
+          placeholder={user?.displayName || user?.email || "Anonymous"}
+          className="text-[10px] text-blue-500 dark:text-cyan-300 bg-blue-100/30 dark:bg-cyan-900/30 border border-blue-500/30 dark:border-cyan-500/30 p-2 outline-none focus:border-blue-500 dark:focus:border-cyan-400 placeholder:text-blue-400/50 dark:placeholder:text-cyan-300/30"
+        />
       </div>
 
       <div className="flex flex-col gap-2 text-left">
