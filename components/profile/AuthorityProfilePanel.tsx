@@ -64,7 +64,7 @@ export default function AuthorityProfilePanel({
 
   // Filter reports matching the authority's jurisdiction
   const matchReports = useMemo(() => {
-    if (!subject) return [];
+    if (!subject || subject.idKey == null || subject.idKey === "") return [];
     return reports.filter((r) => {
       if (subject.type === "mla") {
         return r.acNo != null && String(r.acNo) === String(subject.idKey);
@@ -77,9 +77,9 @@ export default function AuthorityProfilePanel({
       }
       if (subject.type === "ward") {
         const matchesLsg =
-          r.secLsgCode === subject.idKey ||
-          r.lsgCode === subject.idKey ||
-          r.lsgd === subject.idKey;
+          (r.secLsgCode != null && String(r.secLsgCode) === String(subject.idKey)) ||
+          (r.lsgCode != null && String(r.lsgCode) === String(subject.idKey)) ||
+          (r.lsgd != null && String(r.lsgd) === String(subject.idKey));
         return (
           matchesLsg &&
           r.wardNo != null &&
@@ -88,9 +88,9 @@ export default function AuthorityProfilePanel({
       }
       if (subject.type === "lsgd") {
         return (
-          r.secLsgCode === subject.idKey ||
-          r.lsgCode === subject.idKey ||
-          r.lsgd === subject.idKey ||
+          (r.secLsgCode != null && String(r.secLsgCode) === String(subject.idKey)) ||
+          (r.lsgCode != null && String(r.lsgCode) === String(subject.idKey)) ||
+          (r.lsgd != null && String(r.lsgd) === String(subject.idKey)) ||
           (r.lsgdLabel &&
             String(r.lsgdLabel).toLowerCase() ===
               String(subject.name).toLowerCase()) ||

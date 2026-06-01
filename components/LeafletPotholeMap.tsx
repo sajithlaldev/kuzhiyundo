@@ -2103,11 +2103,13 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose, onSel
                   </svg>
                 );
                 const ContactCell = ({ label, name, party, phone, email, onClick }: { label: string; name: string; party?: string | null; phone?: string | null; email?: string | null; onClick?: () => void }) => (
-                  <div className={onClick ? "group" : ""}>
+                  <div
+                    onClick={onClick}
+                    className={onClick ? "group cursor-pointer" : ""}
+                  >
                     <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">{label}</div>
                     <div
-                      onClick={onClick}
-                      className={`text-blue-500 dark:text-cyan-300 font-bold leading-tight ${onClick ? "cursor-pointer group-hover:underline group-hover:text-blue-600 dark:group-hover:text-cyan-400" : ""}`}
+                      className={`text-blue-500 dark:text-cyan-300 font-bold leading-tight ${onClick ? "group-hover:underline group-hover:text-blue-600 dark:group-hover:text-cyan-400" : ""}`}
                     >
                       {name}
                     </div>
