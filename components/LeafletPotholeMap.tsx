@@ -67,6 +67,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import ProfilePanel from "./profile/ProfilePanel";
+import AuthorityProfilePanel from "./profile/AuthorityProfilePanel";
 import LeaderboardPanel from "./leaderboard/LeaderboardPanel";
 // Fix default marker icon issues in Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -110,6 +111,8 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
     { uid: string; name: string; photoURL?: string } | null
   >(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [authorityOpen, setAuthorityOpen] = useState(false);
+  const [authoritySubject, setAuthoritySubject] = useState<any>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -222,7 +225,18 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
         />
 
         {/* Existing Reports */}
-        <RenderReports reports={reports} detailReportId={detailReportId} setDetailReportId={setDetailReportId} pendingDeepLinkId={pendingDeepLinkId} setPendingDeepLinkId={setPendingDeepLinkId} />
+        <RenderReports
+          reports={reports}
+          detailReportId={detailReportId}
+          setDetailReportId={setDetailReportId}
+          pendingDeepLinkId={pendingDeepLinkId}
+          setPendingDeepLinkId={setPendingDeepLinkId}
+          onSelectAuthority={(auth: any) => {
+            setAuthoritySubject(auth);
+            setAuthorityOpen(true);
+            setDetailReportId(null);
+          }}
+        />
 
         {/* Current Reporting Route — only after user confirms both points */}
         {reportingMode && origin && destination && (
@@ -319,6 +333,13 @@ export default function LeafletPotholeMap({ initialReports }: { initialReports?:
           onNavigateToReport={(id) => { setProfileOpen(false); setPendingDeepLinkId(id); }}
         />
       )}
+      <AuthorityProfilePanel
+        isOpen={authorityOpen}
+        onClose={() => setAuthorityOpen(false)}
+        subject={authoritySubject}
+        reports={reports}
+        onNavigateToReport={(id) => { setAuthorityOpen(false); setPendingDeepLinkId(id); }}
+      />
       <ReportsMarquee reports={reports} onSelect={setPendingDeepLinkId} />
       <LeaderboardPanel
         isOpen={leaderboardOpen}
@@ -489,7 +510,21 @@ function RouteDisplay({
   );
 }
 
-function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeepLinkId, setPendingDeepLinkId }: { reports: any[]; detailReportId: string | null; setDetailReportId: (id: string | null) => void; pendingDeepLinkId: string | null; setPendingDeepLinkId: (id: string | null) => void }) {
+function RenderReports({
+  reports,
+  detailReportId,
+  setDetailReportId,
+  pendingDeepLinkId,
+  setPendingDeepLinkId,
+  onSelectAuthority,
+}: {
+  reports: any[];
+  detailReportId: string | null;
+  setDetailReportId: (id: string | null) => void;
+  pendingDeepLinkId: string | null;
+  setPendingDeepLinkId: (id: string | null) => void;
+  onSelectAuthority?: (auth: any) => void;
+}) {
   const user = useAuthStore((state) => state.user);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1149,6 +1184,7 @@ function RenderReports({ reports, detailReportId, setDetailReportId, pendingDeep
               user={user}
               onVote={handleVote}
               onClose={() => setDetailReportId(null)}
+              onSelectAuthority={onSelectAuthority}
             />
           );
         })()}
@@ -1659,7 +1695,7 @@ function MiniMap({ reportId, encodedPath, severity, roadAuthority: initialRoadAu
   );
 }
 
-function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any) {
+function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose, onSelectAuthority }: any) {
   const [ac, setAc] = useState(initialAc ?? null);
   const [wardMember, setWardMember] = useState<WardMember | null>(null);
   const wardMemberFetched = useRef(false);
@@ -1916,9 +1952,42 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
               <div className="text-sm font-bold text-blue-600 dark:text-cyan-400 line-clamp-2">{report.address || "Unknown Location"}</div>
               {ac && (
                 <div className="flex flex-col gap-0.5 mt-0.5">
-                  {ac.lsgdLabel && <div className="text-[10px] text-orange-400/80">{ac.lsgdLabel}</div>}
+                  {ac.lsgdLabel && (
+                    <div
+                      onClick={() => {
+                        if (onSelectAuthority) {
+                          onSelectAuthority({
+                            type: "lsgd",
+                            name: ac.lsgdLabel || "Local Body",
+                            idKey: report.secLsgCode || ac?.secLsgCode || report.lsgCode || ac?.lsgCode || report.lsgd || ac?.lsgd,
+                            label: "Local Self Government"
+                          });
+                        }
+                      }}
+                      className="text-[10px] text-orange-400/80 cursor-pointer hover:underline hover:text-orange-300 transition-colors"
+                    >
+                      {ac.lsgdLabel}
+                    </div>
+                  )}
                   {ac.acName && (
-                    <div className="text-[10px] text-orange-400/60">
+                    <div
+                      onClick={() => {
+                        if (onSelectAuthority) {
+                          const acNo = report.acNo ?? ac?.acNo;
+                          const mla = getMla(acNo);
+                          onSelectAuthority({
+                            type: "mla",
+                            name: mla?.name ?? `MLA for ${ac.acName}`,
+                            party: mla?.party,
+                            phone: mla?.phone,
+                            email: mla?.email,
+                            idKey: acNo,
+                            label: `${ac.acName} Constituency`
+                          });
+                        }
+                      }}
+                      className="text-[10px] text-orange-400/60 cursor-pointer hover:underline hover:text-orange-300 transition-colors"
+                    >
                       {ac.acName} AC{ac.pcName ? ` · ${ac.pcName} PC` : ""}
                     </div>
                   )}
@@ -1978,15 +2047,42 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                 </div>
               </div>
               {report.district && (
-                <div>
+                <div
+                  onClick={() => {
+                    if (onSelectAuthority) {
+                      onSelectAuthority({
+                        type: "district",
+                        name: report.district,
+                        idKey: report.district,
+                        label: "District Administration"
+                      });
+                    }
+                  }}
+                  className="cursor-pointer group"
+                >
                   <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">District</div>
-                  <div className="text-blue-500 dark:text-cyan-300 font-bold">{report.district}</div>
+                  <div className="text-blue-500 dark:text-cyan-300 font-bold group-hover:underline group-hover:text-blue-600 dark:group-hover:text-cyan-400">{report.district}</div>
                 </div>
               )}
               {(report.wardNo != null || ac?.wardNo != null) && (
-                <div>
+                <div
+                  onClick={() => {
+                    if (onSelectAuthority) {
+                      const wNo = report.wardNo ?? ac?.wardNo;
+                      const wName = report.wardName ?? ac?.wardName;
+                      onSelectAuthority({
+                        type: "ward",
+                        name: `${wName || "Ward"} (#${wNo})`,
+                        idKey: report.secLsgCode || ac?.secLsgCode || report.lsgCode || ac?.lsgCode || report.lsgd || ac?.lsgd,
+                        subIdKey: wNo,
+                        label: `${ac?.lsgdLabel || report.lsgdLabel || "Local Body"}`
+                      });
+                    }
+                  }}
+                  className="cursor-pointer group"
+                >
                   <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">Ward</div>
-                  <div className="text-blue-500 dark:text-cyan-300 font-bold">
+                  <div className="text-blue-500 dark:text-cyan-300 font-bold group-hover:underline group-hover:text-blue-600 dark:group-hover:text-cyan-400">
                     {report.wardName ?? ac?.wardName} (#{report.wardNo ?? ac?.wardNo})
                   </div>
                 </div>
@@ -2006,13 +2102,20 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 );
-                const ContactCell = ({ label, name, party, phone, email }: { label: string; name: string; party?: string | null; phone?: string | null; email?: string | null }) => (
-                  <div>
+                const ContactCell = ({ label, name, party, phone, email, onClick }: { label: string; name: string; party?: string | null; phone?: string | null; email?: string | null; onClick?: () => void }) => (
+                  <div
+                    onClick={onClick}
+                    className={onClick ? "group cursor-pointer" : ""}
+                  >
                     <div className="text-blue-700/50 dark:text-cyan-500/50 uppercase tracking-widest mb-0.5">{label}</div>
-                    <div className="text-blue-500 dark:text-cyan-300 font-bold leading-tight">{name}</div>
+                    <div
+                      className={`text-blue-500 dark:text-cyan-300 font-bold leading-tight ${onClick ? "group-hover:underline group-hover:text-blue-600 dark:group-hover:text-cyan-400" : ""}`}
+                    >
+                      {name}
+                    </div>
                     {party && <div className="text-blue-600/60 dark:text-cyan-400/60 text-[9px] mt-0.5 leading-tight">{party}</div>}
                     {(phone || email) && (
-                      <div className="flex gap-1 mt-1.5">
+                      <div className="flex gap-1 mt-1.5" onClick={(e) => e.stopPropagation()}>
                         {phone && (
                           <a href={`tel:${phone}`} aria-label={`Call ${name}`}
                             className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-colors">
@@ -2037,6 +2140,19 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                         name={wardMember.memberName ?? ""}
                         party={wardMember.party}
                         phone={wardMember.phone}
+                        onClick={() => {
+                          if (onSelectAuthority) {
+                            onSelectAuthority({
+                              type: "ward",
+                              name: wardMember.memberName ?? "Ward Member",
+                              party: wardMember.party,
+                              phone: wardMember.phone,
+                              idKey: wardMember.lsgiCode || report.secLsgCode || ac?.secLsgCode,
+                              subIdKey: report.wardNo ?? ac?.wardNo,
+                              label: `${wardMember.lsgiName || ac?.lsgdLabel || "Local Body"} - Ward ${report.wardNo ?? ac?.wardNo}`
+                            });
+                          }
+                        }}
                       />
                     )}
                     {mla && (
@@ -2045,6 +2161,19 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                         name={mla.name}
                         phone={mla.phone}
                         email={mla.email}
+                        onClick={() => {
+                          if (onSelectAuthority) {
+                            onSelectAuthority({
+                              type: "mla",
+                              name: mla.name,
+                              party: mla.party,
+                              phone: mla.phone,
+                              email: mla.email,
+                              idKey: acNo,
+                              label: `${ac?.acName || "Unknown"} Constituency`
+                            });
+                          }
+                        }}
                       />
                     )}
                     {mp && (
@@ -2053,6 +2182,19 @@ function ReportDetailSheet({ report, ac: initialAc, user, onVote, onClose }: any
                         name={mp.name}
                         phone={mp.phone}
                         email={mp.email}
+                        onClick={() => {
+                          if (onSelectAuthority) {
+                            onSelectAuthority({
+                              type: "mp",
+                              name: mp.name,
+                              party: mp.party,
+                              phone: mp.phone,
+                              email: mp.email,
+                              idKey: pcName,
+                              label: `${pcName || "Unknown"} Parliamentary Constituency`
+                            });
+                          }
+                        }}
                       />
                     )}
                   </>
