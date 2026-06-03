@@ -2912,6 +2912,19 @@ function MapSearch() {
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const isFocusedRef = useRef(false);
+
+  // On mobile the search box is anchored to the bottom of the map. Focusing it
+  // opens the keyboard and the browser scrolls the input into view, which drags
+  // the SEO content below the map into frame. Pin the page back to the top so
+  // the map + search stay visible. Re-pin on every viewport resize while focused
+  // (the keyboard animates open over a few hundred ms and can re-scroll).
+  const pinToTop = () => window.scrollTo({ top: 0 });
+  useEffect(() => {
+    const onResize = () => { if (isFocusedRef.current) pinToTop(); };
+    window.visualViewport?.addEventListener("resize", onResize);
+    return () => window.visualViewport?.removeEventListener("resize", onResize);
+  }, []);
 
   const normalizeSearchResults = (data: any) => {
     const items = Array.isArray(data)
@@ -2981,7 +2994,15 @@ function MapSearch() {
           type="text"
           value={query}
           onChange={(e) => searchPlaces(e.target.value)}
-          onFocus={() => setShowResults(true)}
+          onFocus={() => {
+            setShowResults(true);
+            isFocusedRef.current = true;
+            // Beat the browser's native focus-scroll, then again once the
+            // keyboard has finished animating open.
+            requestAnimationFrame(pinToTop);
+            setTimeout(pinToTop, 300);
+          }}
+          onBlur={() => { isFocusedRef.current = false; }}
           placeholder="SEARCH LOCATION..."
           style={{ fontSize: 16 }}
           className="w-full bg-white/90 dark:bg-black/90 border border-blue-500/50 dark:border-cyan-500/50 text-blue-600 dark:text-cyan-400 pl-8 pr-3 py-2 uppercase tracking-widest outline-none focus:border-blue-400 dark:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.3)] placeholder:text-blue-700/30 dark:placeholder:text-cyan-500/40 font-mono backdrop-blur-md"
