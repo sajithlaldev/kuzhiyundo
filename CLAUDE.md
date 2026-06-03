@@ -60,3 +60,13 @@ Both routes enforce Firebase App Check via `verifyAppCheckToken()` in `lib/appch
 See `.env.example`. Key non-obvious ones:
 - `OLA_MAPS_API_KEY` — server-side only (no `NEXT_PUBLIC_`), used in `/api/search`. The upstream fetch must include `Origin: https://kuzhiyundo.com` or OLA Maps rejects with "Domain not allowed."
 - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` — reCAPTCHA v3 for Firebase App Check.
+
+## Deployment
+
+Deployed to **Cloudflare Pages** (project `kuzhiyundo`) via **GitHub Actions** — `.github/workflows/deploy.yml`. The Cloudflare Pages Git integration is disabled; Actions is the single deploy path.
+
+- Build: `pnpm dlx @cloudflare/next-on-pages@1` → output `.vercel/output/static`. This is why all `/api/*` routes are `runtime = "edge"` (next-on-pages requires it).
+- Deploy: `cloudflare/wrangler-action` runs `wrangler pages deploy`. Push to `main` → production; PRs → preview deployment (URL commented on the PR).
+- Package manager is **pnpm** (`pnpm-lock.yaml`, `packageManager` field). No `package-lock.json`.
+
+**Required GitHub Actions secrets:** `CLOUDFLARE_API_TOKEN` (scope: Cloudflare Pages: Edit), `CLOUDFLARE_ACCOUNT_ID`, and all 10 `NEXT_PUBLIC_*` build-time vars. **Runtime** secrets (`OLA_MAPS_API_KEY`, `FIREBASE_SERVICE_ACCOUNT_KEY`) live on the Cloudflare Pages project, not in Actions.

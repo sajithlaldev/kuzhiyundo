@@ -1,0 +1,80 @@
+name: Deploy to Cloudflare Pages
+
+# Builds the Next.js app with @cloudflare/next-on-pages and deploys the static
+# output to the "kuzhiyundo" Cloudflare Pages project via Direct Upload.
+#   - push to main        -> production deployment
+#   - pull request to main -> preview deployment (URL is commented on the PR)
+#
+# Required GitHub repository secrets (Settings -> Secrets and variables -> Actions):
+#   CLOUDFLARE_API_TOKEN   - token with the "Cloudflare Pages: Edit" permission
+#   CLOUDFLARE_ACCOUNT_ID  - your Cloudflare account ID
+#   NEXT_PUBLIC_*          - the 10 build-time vars listed in the build step below
+# Runtime secrets (OLA_MAPS_API_KEY, FIREBASE_SERVICE_ACCOUNT_KEY) are NOT set here;
+# they remain configured on the Cloudflare Pages project (dashboard -> Settings -> Variables).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel an in-progress run for the same branch/PR when a new commit lands.
+concurrency:
+  group: pages-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Deploy on every push to main, and on PRs only when they originate from this
+    # repo (not a fork). Fork PRs don't receive secrets and must not deploy
+    # unreviewed code with access to the project's credentials.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write # allow wrangler-action to comment the preview URL
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # This job runs untrusted PR code during install/build; don't leave the
+          # GITHUB_TOKEN persisted in the local git config for it to read.
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (next-on-pages)
+        run: pnpm dlx @cloudflare/next-on-pages@1.13.16
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
+          NEXT_PUBLIC_FIREBASE_FIRESTORE_DATABASE_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_FIRESTORE_DATABASE_ID }}
+          NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}
+          NEXT_PUBLIC_CLARITY_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_CLARITY_PROJECT_ID }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # Push to main -> --branch=main (Cloudflare treats the production branch as
+          # production). PRs -> a deterministic pr-<number> branch so they always land
+          # as previews and can never accidentally resolve to the production branch.
+          command: pages deploy .vercel/output/static --project-name=kuzhiyundo --branch=${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
